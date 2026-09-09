@@ -46,10 +46,21 @@ Each step restates scope + success criteria before code is written.
   reorder, designation in-use guard) + browser flow (add "Critical" priority,
   reorder, delete).
 
-- [ ] **1.0.6 — Shared building blocks**
-  Attachments, chatter/comments, @mentions, followers, activities, audit trail —
-  mountable on any record.
-  *Done when:* posting a comment with a mention adds a follower + writes an audit row.
+- [x] **1.0.6 — Shared building blocks**
+  Global SharedModule mounted via `/:entityType/:entityId/…`:
+  - Attachments: upload (multipart, local-disk storage → swap for R2 later),
+    download, link, list; 50 MB cap
+  - Comments/chatter: post/edit/soft-delete; `GET …/chatter` = comments + audit
+    events merged chronologically
+  - @mentions → auto-follow + MENTION notification; other followers get GENERAL
+  - Followers: list/add/remove
+  - Activities: create/update/complete, `GET /me/activities`; assignment notifies
+  - Audit: append-only `AuditService.record()`; `GET …/audit` + admin `GET /audit`
+  - Notifications: list, unread-count, mark read/all
+  Web: **My Work** (activities) + **Notifications** screens, sidebar unread badge.
+  *Done:* verified — 20+ API checks across two users (mention→follow→notify,
+  activity assign→complete→audit, upload→link→download, 403s) + browser
+  (create activity, mark done, notifications page). Storage: local disk for now.
 
 - [ ] **1.0.7 — Tickets: create / list / detail**
   Conditional forms per request type. My Tickets, Team Tickets, ticket detail.

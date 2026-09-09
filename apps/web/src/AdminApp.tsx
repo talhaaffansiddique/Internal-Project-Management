@@ -1,28 +1,52 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './auth'
+import { api } from './api'
 import Users from './pages/admin/Users'
 import Departments from './pages/admin/Departments'
 import Teams from './pages/admin/Teams'
 import MasterData from './pages/admin/MasterData'
+import MyWork from './pages/MyWork'
+import Notifications from './pages/Notifications'
 
-type View = 'dashboard' | 'users' | 'departments' | 'teams' | 'masterdata'
+type View =
+  | 'dashboard'
+  | 'mywork'
+  | 'notifications'
+  | 'users'
+  | 'departments'
+  | 'teams'
+  | 'masterdata'
 
-const NAV: { key: View; label: string; group: string }[] = [
+const NAV: { key: View; label: string; group: string; admin?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', group: 'Main' },
-  { key: 'users', label: 'Users', group: 'Administration' },
-  { key: 'departments', label: 'Departments', group: 'Administration' },
-  { key: 'teams', label: 'Teams', group: 'Administration' },
-  { key: 'masterdata', label: 'Master Data', group: 'Administration' },
+  { key: 'mywork', label: 'My Work', group: 'Main' },
+  { key: 'notifications', label: 'Notifications', group: 'Main' },
+  { key: 'users', label: 'Users', group: 'Administration', admin: true },
+  { key: 'departments', label: 'Departments', group: 'Administration', admin: true },
+  { key: 'teams', label: 'Teams', group: 'Administration', admin: true },
+  { key: 'masterdata', label: 'Master Data', group: 'Administration', admin: true },
 ]
 
 export default function AdminApp() {
   const { user, logout } = useAuth()
   const [view, setView] = useState<View>('dashboard')
+  const [unread, setUnread] = useState(0)
 
-  const canAdmin =
-    !!user &&
-    user.roles.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN')
+  const refreshUnread = useCallback(() => {
+    api<{ count: number }>('/notifications/unread-count')
+      .then((r) => setUnread(r.count))
+      .catch(() => {})
+  }, [])
 
+  useEffect(() => {
+    refreshUnread()
+    const t = setInterval(refreshUnread, 30000)
+    return () => clearInterval(t)
+  }, [refreshUnread])
+
+  const canAdmin = !!user?.roles.some(
+    (r) => r === 'ADMIN' || r === 'SUPER_ADMIN',
+  )
   const initials = user!.fullName
     .split(' ')
     .map((p) => p[0])
@@ -41,7 +65,7 @@ export default function AdminApp() {
           <div key={g}>
             <div className="side-group">{g}</div>
             {NAV.filter((n) => n.group === g).map((n) => {
-              const locked = n.group === 'Administration' && !canAdmin
+              const locked = n.admin && !canAdmin
               return (
                 <button
                   key={n.key}
@@ -51,6 +75,9 @@ export default function AdminApp() {
                   title={locked ? 'Requires Admin role' : undefined}
                 >
                   {n.label}
+                  {n.key === 'notifications' && unread > 0 && (
+                    <span className="count">{unread}</span>
+                  )}
                 </button>
               )
             })}
@@ -60,16 +87,19 @@ export default function AdminApp() {
 
       <div className="content">
         <header className="topbar">
-          <div className="phase">Phase 1.0.5 — master data</div>
+          <div className="phase">Phase 1.0.6 — shared building blocks</div>
           <div className="who">
             <span className="avatar">{initials}</span>
             <div>
               <b>{user!.fullName}</b>
               <div className="muted small">
-                {user!.roleNames.join(', ')} · {user!.primaryDepartment?.name ?? 'No dept'}
+                {user!.roleNames.join(', ')} ·{' '}
+                {user!.primaryDepartment?.name ?? 'No dept'}
               </div>
             </div>
-            <button className="btn ghost" onClick={logout}>Log out</button>
+            <button className="btn ghost" onClick={logout}>
+              Log out
+            </button>
           </div>
         </header>
 
@@ -77,17 +107,11 @@ export default function AdminApp() {
           {view === 'dashboard' && (
             <div>
               <h1>Dashboard</h1>
-              <p className="muted">
-                Placeholder. Real dashboard arrives in Phase 1.0.10.
-              </p>
-              {!canAdmin && (
-                <p className="muted small">
-                  Your account does not have the Admin or Super Admin role, so the
-                  Administration screens are locked.
-                </p>
-              )}
+              <p className="muted">Placeholder. Real dashboard arrives in Phase 1.0.10.</p>
             </div>
           )}
+          {view === 'mywork' && <MyWork />}
+          {view === 'notifications' && <Notifications onChanged={refreshUnread} />}
           {view === 'users' && canAdmin && <Users />}
           {view === 'departments' && canAdmin && <Departments />}
           {view === 'teams' && canAdmin && <Teams />}

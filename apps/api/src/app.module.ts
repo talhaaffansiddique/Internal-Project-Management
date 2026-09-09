@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { OrgModule } from './org/org.module.js';
 import { MasterDataModule } from './master-data/master-data.module.js';
+import { SharedModule } from './shared/shared.module.js';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { MasterDataModule } from './master-data/master-data.module.js';
     UsersModule,
     OrgModule,
     MasterDataModule,
+    SharedModule,
     HealthModule,
   ],
 })

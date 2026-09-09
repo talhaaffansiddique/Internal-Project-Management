@@ -64,6 +64,22 @@ body {
 .side-item:hover:not(:disabled) { background: rgba(255, 255, 255, 0.07); color: #fff; }
 .side-item.active { background: #1d4ed8; color: #fff; font-weight: 600; }
 .side-item:disabled { opacity: 0.4; cursor: not-allowed; }
+.side-item .count {
+  margin-left: auto; background: #dc2626; color: #fff; font-size: 11px;
+  min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* ---------- Notifications ---------- */
+.notif-list { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #fff; }
+.notif {
+  display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px;
+  border-bottom: 1px solid #eef2f7; font-size: 13px;
+}
+.notif:last-child { border-bottom: none; }
+.notif.unread { background: #f0f7ff; cursor: pointer; }
+.notif.unread:hover { background: #e6f0fe; }
+.notif-main { flex: 1; min-width: 0; }
 
 .content { display: flex; flex-direction: column; min-width: 0; }
 .topbar {
