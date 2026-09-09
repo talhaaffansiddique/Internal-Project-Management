@@ -53,10 +53,19 @@ Open `apps/api/.env` and paste your Neon string into `DATABASE_URL`.
 npm run prisma:migrate
 ```
 
-(Optional) load a little starter data:
+Load starter data (roles, departments, master data, a Super Admin user):
 
 ```
 npm run db:seed
+```
+
+Default login created by the seed: **talhaaffansiddique@gmail.com** / **ChangeMe!123**
+(change it after first login; override with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` in `apps/api/.env`).
+
+Browse the database any time with:
+
+```
+npm run prisma:studio
 ```
 
 ## Running the app (every day)

@@ -1,6 +1,7 @@
 // OpsHub database schema
-// Phase 1.0.1 — scaffold only. Core tables (users, roles, departments, teams,
-// tickets, audit, etc.) are added in Phase 1.0.2.
+// Phase 1.0.2 — core foundation: people & org, master data, shared building blocks.
+// Module tables (tickets, projects, meetings, training, procurement) come in later phases
+// and will reference these via the polymorphic (entityType, entityId) pair.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,7 +12,346 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Key/value store for simple system-wide settings. Also proves the DB pipeline works.
+// ============================================================
+// Enums
+// ============================================================
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+/// Records that shared building blocks (comments, followers, attachments,
+/// activities, audit, notifications) can attach to.
+enum EntityType {
+  TICKET
+  PROJECT
+  TASK
+  MEETING
+  TRAINING
+  PROCUREMENT_REQUEST
+}
+
+enum ActivityStatus {
+  OPEN
+  DONE
+  CANCELLED
+}
+
+enum NotificationType {
+  MENTION
+  ASSIGNMENT
+  MEETING_INVITATION
+  MEETING_REMINDER
+  APPROVAL_REQUEST
+  TRAINING_ACK
+  ACTIVITY_DUE
+  STATUS_CHANGE
+  GENERAL
+}
+
+// ============================================================
+// People & organization
+// ============================================================
+
+model User {
+  id                  String     @id @default(uuid())
+  email               String     @unique
+  passwordHash        String
+  fullName            String
+  status              UserStatus @default(INVITED)
+  designationId       String?
+  primaryDepartmentId String?
+  supervisorId        String?
+  lastLoginAt         DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  designation       Designation? @relation(fields: [designationId], references: [id])
+  primaryDepartment Department?  @relation("DepartmentMembers", fields: [primaryDepartmentId], references: [id])
+  supervisor        User?        @relation("UserSupervisor", fields: [supervisorId], references: [id])
+  reports           User[]       @relation("UserSupervisor")
+
+  roles               UserRole[]
+  teamMemberships     TeamMember[]
+  attachmentsUploaded Attachment[]
+  comments            Comment[]
+  commentMentions     CommentMention[]
+  following           Follower[]       @relation("FollowerUser")
+  followersAdded      Follower[]       @relation("FollowerAddedBy")
+  activitiesAssigned  Activity[]       @relation("ActivityAssignee")
+  activitiesCreated   Activity[]       @relation("ActivityCreator")
+  auditEntries        AuditLog[]
+  notifications       Notification[]
+
+  @@index([primaryDepartmentId])
+  @@index([supervisorId])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  rank        Int      @default(0)
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  users UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String?  @unique
+  active    Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members User[] @relation("DepartmentMembers")
+  teams   Team[]
+
+  @@map("departments")
+}
+
+model Team {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  departmentId String?
+  description  String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  department Department?  @relation(fields: [departmentId], references: [id])
+  members    TeamMember[]
+
+  @@index([departmentId])
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model Designation {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+
+  @@map("designations")
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  address   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("branches")
+}
+
+// ============================================================
+// Master data — configurable values (brief §5.1)
+// Super Admin adds values here with no code change.
+// ============================================================
+
+model MasterDataType {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  name            String
+  description     String?
+  allowsHierarchy Boolean  @default(false)
+  isSystem        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  values MasterDataValue[]
+
+  @@map("master_data_types")
+}
+
+model MasterDataValue {
+  id        String   @id @default(uuid())
+  typeId    String
+  key       String
+  label     String
+  parentId  String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  isSystem  Boolean  @default(false)
+  meta      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type     MasterDataType    @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  parent   MasterDataValue?  @relation("MasterDataValueChildren", fields: [parentId], references: [id])
+  children MasterDataValue[] @relation("MasterDataValueChildren")
+
+  @@unique([typeId, key])
+  @@index([typeId, active])
+  @@map("master_data_values")
+}
+
+// ============================================================
+// Shared building blocks — attach to any record via (entityType, entityId)
+// ============================================================
+
+model Attachment {
+  id               String      @id @default(uuid())
+  entityType       EntityType?
+  entityId         String?
+  originalFilename String
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  uploadedById     String
+  createdAt        DateTime    @default(now())
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("attachments")
+}
+
+model Comment {
+  id         String     @id @default(uuid())
+  entityType EntityType
+  entityId   String
+  authorId   String
+  body       String
+  editedAt   DateTime?
+  deletedAt  DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  author   User             @relation(fields: [authorId], references: [id])
+  mentions CommentMention[]
+
+  @@index([entityType, entityId])
+  @@map("comments")
+}
+
+model CommentMention {
+  id        String @id @default(uuid())
+  commentId String
+  userId    String
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("comment_mentions")
+}
+
+model Follower {
+  id         String     @id @default(uuid())
+  entityType EntityType
+  entityId   String
+  userId     String
+  addedById  String?
+  createdAt  DateTime   @default(now())
+
+  user    User  @relation("FollowerUser", fields: [userId], references: [id], onDelete: Cascade)
+  addedBy User? @relation("FollowerAddedBy", fields: [addedById], references: [id])
+
+  @@unique([entityType, entityId, userId])
+  @@index([userId])
+  @@map("followers")
+}
+
+/// Follow-ups (brief §10) — an action someone must complete by a due date.
+/// Deliberately separate from Comment (chatter).
+model Activity {
+  id           String         @id @default(uuid())
+  title        String
+  assignedToId String
+  dueAt        DateTime
+  entityType   EntityType?
+  entityId     String?
+  status       ActivityStatus @default(OPEN)
+  completedAt  DateTime?
+  createdById  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  assignedTo User @relation("ActivityAssignee", fields: [assignedToId], references: [id])
+  createdBy  User @relation("ActivityCreator", fields: [createdById], references: [id])
+
+  @@index([assignedToId, status])
+  @@index([entityType, entityId])
+  @@map("activities")
+}
+
+/// Append-only audit trail (brief §17). Never updated, never silently overwritten.
+model AuditLog {
+  id         String     @id @default(uuid())
+  entityType EntityType
+  entityId   String
+  action     String
+  summary    String
+  actorId    String?
+  oldValue   Json?
+  newValue   Json?
+  meta       Json?
+  createdAt  DateTime   @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@map("audit_log")
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  recipientId String
+  type        NotificationType
+  title       String
+  body        String?
+  entityType  EntityType?
+  entityId    String?
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  recipient User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, readAt])
+  @@map("notifications")
+}
+
 model SystemSetting {
   id        String   @id @default(uuid())
   key       String   @unique

@@ -8,15 +8,17 @@ Each step restates scope + success criteria before code is written.
 
 ## Phase v1.0 — Core Platform
 
-- [~] **1.0.1 — Project scaffold**
+- [x] **1.0.1 — Project scaffold**
   NestJS API + React app + Prisma + git repo. Health check confirms DB connection.
-  *Done when:* web page shows API status **ok** and Database **connected** (both green).
+  *Done:* `/api/v1/health` returns `{status: ok, db: connected}` against Neon.
 
-- [ ] **1.0.2 — Core database schema**
-  Tables: users, roles, departments, teams, team_members, designations, branches,
-  master_data_types, master_data_values, plus the shared tables
-  (attachments, comments, followers, activities, audit_log, notifications).
-  *Done when:* `prisma migrate` runs clean and tables are visible in Prisma Studio.
+- [x] **1.0.2 — Core database schema**
+  18 tables: users, roles, user_roles, departments, teams, team_members, designations,
+  branches, master_data_types, master_data_values, attachments, comments,
+  comment_mentions, followers, activities, audit_log, notifications, system_settings.
+  Seed: 7 roles, 8 departments, 5 designations, 17 master-data types / 56 values,
+  1 Super Admin user.
+  *Done:* migration applied clean, seed is idempotent, data verified.
 
 - [ ] **1.0.3 — Authentication**
   Email + password login, logout, refresh, `GET /auth/me`. Sessions tied to a person.
