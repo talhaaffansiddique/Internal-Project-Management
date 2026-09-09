@@ -27,9 +27,14 @@ Each step restates scope + success criteria before code is written.
   React: login screen, auth context, logout.
   *Done:* verified end to end (9 API checks + browser login→home→logout).
 
-- [ ] **1.0.4 — Users, Roles, Departments, Teams**
-  Admin CRUD + role assignment + team membership. Access filtered by role.
-  *Done when:* Super Admin can create a department, a team, and assign a user a role.
+- [x] **1.0.4 — Users, Roles, Departments, Teams**
+  `@Roles()` decorator + RolesGuard (2nd global guard). API: users CRUD +
+  status + role assignment + `/users/lookup`; departments CRUD; teams CRUD +
+  members add/remove; read-only `/roles`, `/designations`. Privileged-role grants
+  are Super-Admin-only; Super-Admin accounts are protected from lesser admins.
+  Web: sidebar shell + Users / Departments / Teams screens with modals.
+  *Done:* verified end to end — 13 API checks + browser flow (invite user →
+  assign roles → create dept → create team → add member).
 
 - [ ] **1.0.5 — Master Data module**
   Generic add/edit/deactivate of values for every configurable type.

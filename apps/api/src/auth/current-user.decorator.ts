@@ -16,3 +16,14 @@ export const CurrentUser = createParamDecorator(
     return data ? req.user?.[data] : req.user;
   },
 );
+
+/**
+ * Injects the current user's role keys (set by RolesGuard).
+ * Only populated on routes decorated with @Roles(...).
+ */
+export const CurrentUserRoles = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext) => {
+    const req = ctx.switchToHttp().getRequest<{ userRoles?: string[] }>();
+    return req.userRoles ?? [];
+  },
+);
