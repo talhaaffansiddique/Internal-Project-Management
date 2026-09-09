@@ -90,3 +90,37 @@ export interface UserLookup {
   fullName: string
   email: string
 }
+
+export interface FormField {
+  name: string
+  label: string
+  type: 'text' | 'textarea' | 'select'
+  required?: boolean
+  options?: string[]
+  help?: string
+}
+
+export interface TicketForm {
+  type: string
+  label: string
+  fields: FormField[]
+}
+
+export interface Ticket {
+  id: string
+  number: number
+  subject: string
+  type: string
+  description: string | null
+  fields: Record<string, string> | null
+  visibility: 'PRIVATE' | 'TEAM'
+  priority: string | null
+  statusKey: string
+  categoryId: string | null
+  createdAt: string
+  requester: { id: string; fullName: string; email: string }
+  assignee: { id: string; fullName: string; email: string } | null
+  team: { id: string; name: string } | null
+  closedBy?: { id: string; fullName: string } | null
+  form?: TicketForm | null
+}

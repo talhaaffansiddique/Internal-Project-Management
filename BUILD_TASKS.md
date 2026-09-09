@@ -62,10 +62,19 @@ Each step restates scope + success criteria before code is written.
   activity assign→complete→audit, upload→link→download, 403s) + browser
   (create activity, mark done, notifications page). Storage: local disk for now.
 
-- [ ] **1.0.7 — Tickets: create / list / detail**
-  Conditional forms per request type. My Tickets, Team Tickets, ticket detail.
-  Visibility rules (private / team / admin).
-  *Done when:* an employee raises an ERP-issue ticket; only authorized users see it.
+- [x] **1.0.7 — Tickets: create / list / detail**
+  Ticket model (TKT-0001 numbering, statusKey/priority/type as master-data keys,
+  conditional-form answers as JSON). Conditional forms per type (`/ticket-forms`).
+  `GET /tickets` (views: all/mine/team/unassigned/following) + visibility-filtered
+  per §8.3; `GET /tickets/:id` (403 if not authorized); create; edit;
+  `PATCH /tickets/:id/assignee` (admin-only, auto-advances New→Assigned).
+  RolesGuard now always populates `req.userRoles` (removed giant @Roles lists).
+  Web: Tickets list (view tabs + filters), New-request modal with conditional
+  fields, TicketDetail with Discussion/Activity/Files/History tabs reusing 1.0.6.
+  Demo data: `npm run db:seed:demo` — 8 users (password Demo!2345), 3 teams,
+  14 tickets, sample comments/activity.
+  *Done:* verified — visibility API suite + browser (admin sees 14, Lena sees
+  her 2; open ticket, post comment, conditional fields render).
 
 - [ ] **1.0.8 — Ticket status flow + close/reopen**
   New → Assigned → In Progress → Waiting for User → Resolved → Closed.

@@ -16,11 +16,12 @@ export class RolesGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const required = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (!required || required.length === 0) return true;
+    const required = this.reflector.getAllAndOverride<string[] | undefined>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    // No @Roles() anywhere on the route — nothing to do.
+    if (required === undefined) return true;
 
     const req = context.switchToHttp().getRequest<{
       user?: { id: string };
@@ -33,12 +34,13 @@ export class RolesGuard implements CanActivate {
       include: { role: true },
     });
     const keys = rows.map((r) => r.role.key);
-    req.userRoles = keys; // available to controllers via @CurrentUserRoles()
+    req.userRoles = keys; // exposed via @CurrentUserRoles()
+
+    // @Roles() with no args: populate roles, enforce nothing.
+    if (required.length === 0) return true;
 
     if (!required.some((r) => keys.includes(r))) {
-      throw new ForbiddenException(
-        `Requires role: ${required.join(' or ')}`,
-      );
+      throw new ForbiddenException(`Requires role: ${required.join(' or ')}`);
     }
     return true;
   }

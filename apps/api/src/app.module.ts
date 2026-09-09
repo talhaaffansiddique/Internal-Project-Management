@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module.js';
 import { OrgModule } from './org/org.module.js';
 import { MasterDataModule } from './master-data/master-data.module.js';
 import { SharedModule } from './shared/shared.module.js';
+import { TicketsModule } from './tickets/tickets.module.js';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { SharedModule } from './shared/shared.module.js';
     OrgModule,
     MasterDataModule,
     SharedModule,
+    TicketsModule,
     HealthModule,
   ],
 })

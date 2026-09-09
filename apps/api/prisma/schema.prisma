@@ -39,6 +39,11 @@ enum ActivityStatus {
   CANCELLED
 }
 
+enum TicketVisibility {
+  PRIVATE
+  TEAM
+}
+
 enum NotificationType {
   MENTION
   ASSIGNMENT
@@ -84,6 +89,9 @@ model User {
   activitiesCreated   Activity[]       @relation("ActivityCreator")
   auditEntries        AuditLog[]
   notifications       Notification[]
+  ticketsRequested    Ticket[]         @relation("TicketRequester")
+  ticketsAssigned     Ticket[]         @relation("TicketAssignee")
+  ticketsClosed       Ticket[]         @relation("TicketClosedBy")
 
   @@index([primaryDepartmentId])
   @@index([supervisorId])
@@ -143,6 +151,7 @@ model Team {
 
   department Department?  @relation(fields: [departmentId], references: [id])
   members    TeamMember[]
+  tickets    Ticket[]
 
   @@index([departmentId])
   @@map("teams")
@@ -359,4 +368,40 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+// ============================================================
+// Tickets & Requests (brief §8)
+// ============================================================
+
+model Ticket {
+  id           String           @id @default(uuid())
+  number       Int              @unique @default(autoincrement())
+  subject      String
+  type         String // master-data key: erp_issue, it_issue, training_request, ...
+  description  String?
+  fields       Json? // conditional-form answers, shape depends on `type`
+  visibility   TicketVisibility @default(PRIVATE)
+  teamId       String?
+  priority     String? // master-data key (optional, brief §8.5)
+  statusKey    String           @default("new") // master-data key
+  categoryId   String? // master_data_value id (ticket_categories)
+  requesterId  String
+  assigneeId   String?
+  closedById   String?
+  closedAt     DateTime?
+  reopenReason String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  team      Team? @relation(fields: [teamId], references: [id])
+  requester User  @relation("TicketRequester", fields: [requesterId], references: [id])
+  assignee  User? @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  closedBy  User? @relation("TicketClosedBy", fields: [closedById], references: [id])
+
+  @@index([statusKey])
+  @@index([requesterId])
+  @@index([assigneeId])
+  @@index([teamId])
+  @@map("tickets")
 }

@@ -68,6 +68,29 @@ Browse the database any time with:
 npm run prisma:studio
 ```
 
+### Demo data (optional, for manual testing)
+
+```
+npm run db:seed:demo
+```
+
+Resets tickets + demo users and loads 8 people, 3 teams and 14 sample tickets.
+**All demo logins use the password `Demo!2345`:**
+
+| Email | Role | Department |
+|---|---|---|
+| `admin@demo.opshub` | Admin | IT |
+| `sara.k@demo.opshub` | Team Member | Finance |
+| `omar.d@demo.opshub` | Supervisor | Warehouse |
+| `nadia.f@demo.opshub` | Supervisor | HR |
+| `lena.m@demo.opshub` | Employee | Sales |
+| `yusuf.a@demo.opshub` | Director | Management |
+| `priya.n@demo.opshub` | Purchasing / Finance | Purchase |
+| `hassan.r@demo.opshub` | Employee | R&D |
+
+Log in as `admin@demo.opshub` to see everything, or `lena.m@demo.opshub` to see
+how ticket visibility limits a regular employee.
+
 ## Running the app (every day)
 
 From the project root:

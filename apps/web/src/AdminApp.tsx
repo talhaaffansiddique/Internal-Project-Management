@@ -7,10 +7,12 @@ import Teams from './pages/admin/Teams'
 import MasterData from './pages/admin/MasterData'
 import MyWork from './pages/MyWork'
 import Notifications from './pages/Notifications'
+import Tickets from './pages/tickets/Tickets'
 
 type View =
   | 'dashboard'
   | 'mywork'
+  | 'tickets'
   | 'notifications'
   | 'users'
   | 'departments'
@@ -20,6 +22,7 @@ type View =
 const NAV: { key: View; label: string; group: string; admin?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', group: 'Main' },
   { key: 'mywork', label: 'My Work', group: 'Main' },
+  { key: 'tickets', label: 'Tickets & Requests', group: 'Main' },
   { key: 'notifications', label: 'Notifications', group: 'Main' },
   { key: 'users', label: 'Users', group: 'Administration', admin: true },
   { key: 'departments', label: 'Departments', group: 'Administration', admin: true },
@@ -87,7 +90,7 @@ export default function AdminApp() {
 
       <div className="content">
         <header className="topbar">
-          <div className="phase">Phase 1.0.6 — shared building blocks</div>
+          <div className="phase">Phase 1.0.7 — tickets &amp; requests</div>
           <div className="who">
             <span className="avatar">{initials}</span>
             <div>
@@ -111,6 +114,7 @@ export default function AdminApp() {
             </div>
           )}
           {view === 'mywork' && <MyWork />}
+          {view === 'tickets' && <Tickets />}
           {view === 'notifications' && <Notifications onChanged={refreshUnread} />}
           {view === 'users' && canAdmin && <Users />}
           {view === 'departments' && canAdmin && <Departments />}
