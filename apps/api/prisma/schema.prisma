@@ -1,0 +1,22 @@
+// OpsHub database schema
+// Phase 1.0.1 — scaffold only. Core tables (users, roles, departments, teams,
+// tickets, audit, etc.) are added in Phase 1.0.2.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Key/value store for simple system-wide settings. Also proves the DB pipeline works.
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}

@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Internal Operations Platform — Clickable Mockup v0.1</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --primary: #2563eb;
+    --primary-soft: #dbeafe;
+    --sidebar-bg: #0f172a;
+    --sidebar-text: #cbd5e1;
+    --sidebar-active: #1d4ed8;
+    --green: #16a34a;
+    --amber: #d97706;
+    --red: #dc2626;
+    --purple: #7c3aed;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* ---------- Layout ---------- */
+  .app { display: grid; grid-template-columns: 248px 1fr; grid-template-rows: 56px 1fr; min-height: 100vh; }
+  .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 18px; position: sticky; top: 0; z-index: 40; }
+  .sidebar { background: var(--sidebar-bg); color: var(--sidebar-text); padding: 14px 10px; overflow-y: auto; }
+  .main { padding: 22px 26px 60px; overflow-y: auto; }
+
+  /* ---------- Topbar ---------- */
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); white-space: nowrap; }
+  .brand .logo { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, var(--primary), var(--purple)); display: grid; place-items: center; color: #fff; font-size: 14px; }
+  .search { flex: 1; max-width: 460px; position: relative; }
+  .search input { width: 100%; height: 36px; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px 0 34px; background: var(--surface-2); font-size: 13px; }
+  .search input:focus { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
+  .search::before { content: "\1F50D"; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; opacity: .6; }
+  .topbar .spacer { flex: 1; }
+  .icon-btn { position: relative; width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 16px; display: grid; place-items: center; }
+  .icon-btn:hover { background: var(--surface-2); }
+  .badge-dot { position: absolute; top: -4px; right: -4px; background: var(--red); color: #fff; font-size: 10px; min-width: 16px; height: 16px; border-radius: 9px; display: grid; place-items: center; padding: 0 4px; }
+  .profile { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+  .profile:hover { background: var(--surface-2); }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 12px; }
+  .menu-toggle { display: none; }
+
+  /* ---------- Sidebar ---------- */
+  .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #64748b; padding: 14px 12px 6px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13.5px; color: var(--sidebar-text); }
+  .nav-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+  .nav-item.active { background: var(--sidebar-active); color: #fff; font-weight: 600; }
+  .nav-item .ico { width: 18px; text-align: center; }
+  .nav-item .count { margin-left: auto; background: rgba(255,255,255,.14); color: #fff; font-size: 11px; padding: 1px 7px; border-radius: 10px; }
+
+  /* ---------- Content primitives ---------- */
+  .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .page-head h1 { font-size: 20px; }
+  .page-head p { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.05); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 22px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .stat .label { font-size: 12px; color: var(--text-muted); }
+  .stat .value { font-size: 26px; font-weight: 700; margin-top: 4px; }
+  .stat .delta { font-size: 12px; margin-top: 4px; }
+  .delta.up { color: var(--green); } .delta.down { color: var(--red); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .panel h3 { font-size: 14px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .panel .body { padding: 6px 0; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface-2); position: sticky; top: 0; }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--surface-2); }
+
+  .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .t-new { background: #e0e7ff; color: #3730a3; }
+  .t-assigned { background: #cffafe; color: #155e75; }
+  .t-progress { background: #fef3c7; color: #92400e; }
+  .t-waiting { background: #fee2e2; color: #991b1b; }
+  .t-resolved { background: #dcfce7; color: #166534; }
+  .t-closed { background: #e2e8f0; color: #475569; }
+  .t-low { background: #f1f5f9; color: #475569; }
+  .t-normal { background: #e0f2fe; color: #075985; }
+  .t-high { background: #ffedd5; color: #9a3412; }
+  .t-urgent { background: #fee2e2; color: #991b1b; }
+
+  .avatar-sm { width: 24px; height: 24px; border-radius: 50%; background: var(--purple); color: #fff; display: inline-grid; place-items: center; font-size: 10px; font-weight: 600; vertical-align: middle; margin-right: 6px; }
+
+  .list-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .list-row:last-child { border-bottom: none; }
+  .list-row .muted { color: var(--text-muted); font-size: 12px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+  .view { display: none; }
+  .view.active { display: block; animation: fade .18s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Detail drawer ---------- */
+  .drawer-scrim { position: fixed; inset: 0; background: rgba(15,23,42,.4); z-index: 60; display: none; }
+  .drawer-scrim.open { display: block; }
+  .drawer { position: fixed; top: 0; right: 0; height: 100vh; width: min(680px, 96vw); background: var(--surface); z-index: 70; transform: translateX(100%); transition: transform .25s ease; display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(15,23,42,.15); }
+  .drawer.open { transform: none; }
+  .drawer-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 12px; }
+  .drawer-head h2 { font-size: 16px; }
+  .drawer-head .sub { color: var(--text-muted); font-size: 12px; margin-top: 3px; }
+  .drawer-body { overflow-y: auto; padding: 18px 20px; flex: 1; }
+  .close-x { margin-left: auto; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); line-height: 1; }
+  .kv { display: grid; grid-template-columns: 140px 1fr; gap: 8px 14px; font-size: 13px; margin-bottom: 20px; }
+  .kv dt { color: var(--text-muted); }
+
+  .chatter { border-top: 1px solid var(--border); padding-top: 16px; }
+  .chatter h4 { font-size: 13px; margin-bottom: 12px; }
+  .compose { display: flex; gap: 8px; margin-bottom: 18px; }
+  .compose textarea { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 13px; resize: vertical; min-height: 38px; }
+  .feed-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--border); }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-item .meta { font-size: 12px; color: var(--text-muted); }
+  .feed-item .text { font-size: 13px; margin-top: 2px; }
+  .feed-item.system .text { color: var(--text-muted); font-style: italic; }
+
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+  .cal .cell { min-height: 92px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 6px; font-size: 12px; }
+  .cal .cell .d { color: var(--text-muted); }
+  .cal .head { background: var(--surface-2); font-weight: 600; min-height: 0; text-align: center; padding: 8px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
+  .evt { background: var(--primary-soft); color: #1e40af; border-radius: 5px; padding: 2px 5px; margin-top: 3px; font-size: 11px; cursor: pointer; }
+
+  .checklist { list-style: none; }
+  .checklist li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
+  .checklist input { width: 16px; height: 16px; }
+  .checklist li.done span { text-decoration: line-through; color: var(--text-muted); }
+
+  .steps { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+  .step { font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 20px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); }
+  .step.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .step.done { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+
+  .banner { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px 14px; border-radius: 8px; font-size: 12.5px; margin-bottom: 18px; }
+
+  .mstabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .mstab { font-size: 12.5px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; }
+  .mstab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  .empty { text-align: center; color: var(--text-muted); padding: 40px; font-size: 13px; }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: fixed; top: 56px; bottom: 0; left: 0; width: 248px; z-index: 50; transform: translateX(-100%); transition: transform .22s ease; }
+    .sidebar.open { transform: none; }
+    .menu-toggle { display: grid; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .brand span { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="icon-btn menu-toggle" id="menuToggle" title="Menu">&#9776;</button>
+    <div class="brand"><div class="logo">OP</div><span>OpsHub</span></div>
+    <div class="search"><input type="text" placeholder="Search tickets, projects, meetings, people…  (mockup)" /></div>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="notifBtn" title="Notifications">&#128276;<span class="badge-dot">5</span></button>
+    <div class="profile" id="profileBtn">
+      <div class="avatar">TA</div>
+      <div style="line-height:1.2"><div style="font-weight:600;font-size:12.5px">Talha A.</div><div style="font-size:11px;color:var(--text-muted)">Admin · IT</div></div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" data-view="dashboard"><span class="ico">&#128202;</span> Dashboard</div>
+    <div class="nav-item" data-view="mywork"><span class="ico">&#9989;</span> My Work <span class="count">7</span></div>
+    <div class="nav-section">Modules</div>
+    <div class="nav-item" data-view="tickets"><span class="ico">&#127903;</span> Tickets &amp; Requests <span class="count">24</span></div>
+    <div class="nav-item" data-view="projects"><span class="ico">&#128193;</span> Projects</div>
+    <div class="nav-item" data-view="tasks"><span class="ico">&#128203;</span> Tasks</div>
+    <div class="nav-item" data-view="meetings"><span class="ico">&#128197;</span> Meetings &amp; Calendar</div>
+    <div class="nav-item" data-view="training"><span class="ico">&#127891;</span> Training</div>
+    <div class="nav-item" data-view="procurement"><span class="ico">&#128722;</span> Procurement</div>
+    <div class="nav-section">System</div>
+    <div class="nav-item" data-view="notifications"><span class="ico">&#128276;</span> Notifications <span class="count">5</span></div>
+    <div class="nav-item" data-view="reports"><span class="ico">&#128200;</span> Reports</div>
+    <div class="nav-item" data-view="masterdata"><span class="ico">&#128451;</span> Master Data</div>
+    <div class="nav-item" data-view="admin"><span class="ico">&#9881;</span> Administration</div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="view active" id="view-dashboard">
+      <div class="page-head">
+        <div><h1>Dashboard</h1><p>Company-wide operations snapshot · demo data · Monday, 8 Sep 2026</p></div>
+        <button class="btn primary" onclick="alert('Mockup: this would open the New Ticket / Request form with conditional fields.')">+ New Request</button>
+      </div>
+      <div class="cards">
+        <div class="stat"><div class="label">Open Tickets</div><div class="value">24</div><div class="delta up">▲ 3 vs last week</div></div>
+        <div class="stat"><div class="label">In Progress</div><div class="value">9</div><div class="delta down">▼ 1 vs last week</div></div>
+        <div class="stat"><div class="label">Waiting for User</div><div class="value">5</div><div class="delta">no change</div></div>
+        <div class="stat"><div class="label">Avg Resolution</div><div class="value">1.8d</div><div class="delta up">▲ faster by 0.3d</div></div>
+        <div class="stat"><div class="label">Overdue Items</div><div class="value" style="color:var(--red)">6</div><div class="delta down">▼ 2</div></div>
+        <div class="stat"><div class="label">Pending Approvals</div><div class="value">4</div><div class="delta">2 procurement</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Recent Tickets</h3>
+          <div class="body">
+            <table>
+              <tbody id="dashTickets"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Overdue &amp; Upcoming</h3>
+          <div class="body">
+            <div class="list-row"><span class="dot" style="background:var(--red)"></span> Call ERP vendor about GL posting bug <span class="muted" style="margin-left:auto">Overdue 1d · Talha A.</span></div>
+            <div class="list-row"><span class="dot" style="background:var(--red)"></span> Approve laptop procurement request PR-0142 <span class="muted" style="margin-left:auto">Overdue 2d · Director</span></div>
+            <div class="list-row"><span class="dot" style="background:var(--amber)"></span> Prepare Q3 training checklist <span class="muted" style="margin-left:auto">Due today · HR</span></div>
+            <div class="list-row"><span class="dot" style="background:var(--amber)"></span> B2B Sales — send follow-up quotations <span class="muted" style="margin-left:auto">Due tomorrow · Sales</span></div>
+            <div class="list-row"><span class="dot" style="background:var(--green)"></span> Weekly IT sync <span class="muted" style="margin-left:auto">Wed 10:00</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ MY WORK ============ -->
+    <section class="view" id="view-mywork">
+      <div class="page-head"><div><h1>My Work</h1><p>Everything assigned to or followed by you — Talha A.</p></div></div>
+      <div class="cards">
+        <div class="stat"><div class="label">My Tickets</div><div class="value">5</div></div>
+        <div class="stat"><div class="label">My Tasks</div><div class="value">3</div></div>
+        <div class="stat"><div class="label">Meetings Today</div><div class="value">2</div></div>
+        <div class="stat"><div class="label">Pending Approvals</div><div class="value">2</div></div>
+        <div class="stat"><div class="label">My Training</div><div class="value">1</div></div>
+        <div class="stat"><div class="label">My Activities</div><div class="value">4</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel"><h3>My Tickets</h3><div class="body"><table><tbody id="myTickets"></tbody></table></div></div>
+        <div class="panel"><h3>My Activities</h3><div class="body">
+          <div class="list-row"><input type="checkbox"> Call ERP vendor about GL posting bug <span class="muted" style="margin-left:auto">Due tomorrow</span></div>
+          <div class="list-row"><input type="checkbox"> Review PR-0142 quotations <span class="muted" style="margin-left:auto">Due Thu</span></div>
+          <div class="list-row"><input type="checkbox" checked> Reset warehouse scanner accounts <span class="muted" style="margin-left:auto">Done</span></div>
+          <div class="list-row"><input type="checkbox"> Confirm training completion — ERP Invoicing <span class="muted" style="margin-left:auto">Due Fri</span></div>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- ============ TICKETS ============ -->
+    <section class="view" id="view-tickets">
+      <div class="page-head">
+        <div><h1>Tickets &amp; Requests</h1><p>Conditional forms per request type · visibility: private / team / admin</p></div>
+        <button class="btn primary" onclick="alert('Mockup: New Request → choose type (ERP Issue, IT Issue, Training Request, Procurement Request, Access Request, General). Form fields change by type.')">+ New Request</button>
+      </div>
+      <div class="mstabs">
+        <div class="mstab active">All (24)</div><div class="mstab">My Tickets (5)</div><div class="mstab">Team Tickets (11)</div>
+        <div class="mstab">Unassigned (3)</div><div class="mstab">Waiting for User (5)</div><div class="mstab">Closed</div>
+      </div>
+      <div class="panel"><div class="body"><table>
+        <thead><tr><th>ID</th><th>Subject</th><th>Type</th><th>Requester</th><th>Assignee</th><th>Priority</th><th>Status</th><th>Updated</th></tr></thead>
+        <tbody id="ticketRows"></tbody>
+      </table></div></div>
+    </section>
+
+    <!-- ============ PROJECTS ============ -->
+    <section class="view" id="view-projects">
+      <div class="page-head">
+        <div><h1>Projects</h1><p>Objective-driven work with tasks, meetings, chatter and audit history</p></div>
+        <button class="btn primary" onclick="alert('Mockup: New Project form — title, type, owner, team, dates, status.')">+ New Project</button>
+      </div>
+      <div class="cards">
+        <div class="stat"><div class="label">Active</div><div class="value">6</div></div>
+        <div class="stat"><div class="label">On Track</div><div class="value" style="color:var(--green)">4</div></div>
+        <div class="stat"><div class="label">At Risk</div><div class="value" style="color:var(--amber)">1</div></div>
+        <div class="stat"><div class="label">Delayed</div><div class="value" style="color:var(--red)">1</div></div>
+      </div>
+      <div class="panel"><div class="body"><table>
+        <thead><tr><th>Project</th><th>Type</th><th>Owner</th><th>Progress</th><th>Target Date</th><th>Status</th></tr></thead>
+        <tbody id="projectRows"></tbody>
+      </table></div></div>
+    </section>
+
+    <!-- ============ TASKS ============ -->
+    <section class="view" id="view-tasks">
+      <div class="page-head"><div><h1>Tasks</h1><p>Cross-project task list · grouped by status</p></div></div>
+      <div class="grid-2">
+        <div class="panel"><h3>To Do</h3><div class="body" id="tasksTodo"></div></div>
+        <div class="panel"><h3>In Progress</h3><div class="body" id="tasksProg"></div></div>
+        <div class="panel"><h3>In Review</h3><div class="body" id="tasksReview"></div></div>
+        <div class="panel"><h3>Done</h3><div class="body" id="tasksDone"></div></div>
+      </div>
+    </section>
+
+    <!-- ============ MEETINGS ============ -->
+    <section class="view" id="view-meetings">
+      <div class="page-head">
+        <div><h1>Meetings &amp; Calendar</h1><p>September 2026 · in-app invitations, RSVP, minutes, action items</p></div>
+        <button class="btn primary" onclick="alert('Mockup: New Meeting — title, date, time, organizer, participants, location/link, agenda, related project.')">+ New Meeting</button>
+      </div>
+      <div class="cal" id="calendar"></div>
+      <div class="panel" style="margin-top:18px"><h3>Upcoming Invitations</h3><div class="body">
+        <div class="list-row">Weekly IT Sync <span class="muted">Wed 10:00 · organizer: Talha A.</span><span style="margin-left:auto"><button class="btn" onclick="rsvp(this,'Accepted')">Accept</button> <button class="btn" onclick="rsvp(this,'Declined')">Decline</button> <button class="btn" onclick="rsvp(this,'Tentative')">Maybe</button></span></div>
+        <div class="list-row">B2B Sales Review <span class="muted">Thu 14:00 · organizer: Sales Lead</span><span style="margin-left:auto"><button class="btn" onclick="rsvp(this,'Accepted')">Accept</button> <button class="btn" onclick="rsvp(this,'Declined')">Decline</button> <button class="btn" onclick="rsvp(this,'Tentative')">Maybe</button></span></div>
+      </div></div>
+    </section>
+
+    <!-- ============ TRAINING ============ -->
+    <section class="view" id="view-training">
+      <div class="page-head">
+        <div><h1>Training Management</h1><p>Checklist + employee acknowledgement required before completion</p></div>
+        <button class="btn primary" onclick="alert('Mockup: New Training — topic, category, trainer, participants, schedule, checklist, materials.')">+ New Training</button>
+      </div>
+      <div class="panel"><div class="body"><table>
+        <thead><tr><th>Topic</th><th>Category</th><th>Trainer</th><th>Participants</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody id="trainingRows"></tbody>
+      </table></div></div>
+    </section>
+
+    <!-- ============ PROCUREMENT ============ -->
+    <section class="view" id="view-procurement">
+      <div class="page-head">
+        <div><h1>Procurement</h1><p>Employee → Supervisor → (Director or Purchasing/Finance) → Purchasing/Finance</p></div>
+        <button class="btn primary" onclick="alert('Mockup: New Procurement Request — Product or Service, description, business reason, quantity, attachments.')">+ New Request</button>
+      </div>
+      <div class="cards">
+        <div class="stat"><div class="label">Awaiting Supervisor</div><div class="value">3</div></div>
+        <div class="stat"><div class="label">Awaiting Director</div><div class="value">1</div></div>
+        <div class="stat"><div class="label">With Purchasing</div><div class="value">4</div></div>
+        <div class="stat"><div class="label">Delivered (30d)</div><div class="value">7</div></div>
+      </div>
+      <div class="panel"><div class="body"><table>
+        <thead><tr><th>PR#</th><th>Item / Service</th><th>Type</th><th>Requester</th><th>Dept</th><th>Est. Value</th><th>Stage</th></tr></thead>
+        <tbody id="procRows"></tbody>
+      </table></div></div>
+    </section>
+
+    <!-- ============ NOTIFICATIONS ============ -->
+    <section class="view" id="view-notifications">
+      <div class="page-head"><div><h1>Notifications</h1><p>Phase 1: in-app only. Email / WhatsApp deferred.</p></div>
+      <button class="btn" onclick="document.querySelectorAll('#notifList .unread').forEach(e=>e.classList.remove('unread'));document.querySelector('.badge-dot').style.display='none'">Mark all read</button></div>
+      <div class="panel"><div class="body" id="notifList"></div></div>
+    </section>
+
+    <!-- ============ REPORTS ============ -->
+    <section class="view" id="view-reports">
+      <div class="page-head"><div><h1>Reports &amp; Dashboards</h1><p>Management reporting — demo figures</p></div></div>
+      <div class="cards">
+        <div class="stat"><div class="label">Total Tickets (YTD)</div><div class="value">318</div></div>
+        <div class="stat"><div class="label">Avg Resolution</div><div class="value">1.8d</div></div>
+        <div class="stat"><div class="label">Overdue Activities</div><div class="value">6</div></div>
+        <div class="stat"><div class="label">Delayed Projects</div><div class="value">1</div></div>
+        <div class="stat"><div class="label">Training Completion</div><div class="value">86%</div></div>
+        <div class="stat"><div class="label">Procurement Pending</div><div class="value">4</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel"><h3>Tickets by Department</h3><div class="body" id="repDept"></div></div>
+        <div class="panel"><h3>Tickets by Status</h3><div class="body" id="repStatus"></div></div>
+      </div>
+    </section>
+
+    <!-- ============ MASTER DATA ============ -->
+    <section class="view" id="view-masterdata">
+      <div class="page-head"><div><h1>Master Data</h1><p>Super Admin can add new values (e.g. a new department) without code changes</p></div>
+      <button class="btn primary" id="msAddBtn">+ Add Value</button></div>
+      <div class="mstabs" id="msTabs">
+        <div class="mstab active" data-ms="Departments">Departments</div>
+        <div class="mstab" data-ms="Teams">Teams</div>
+        <div class="mstab" data-ms="Designations">Designations</div>
+        <div class="mstab" data-ms="Ticket Types">Ticket Types</div>
+        <div class="mstab" data-ms="Priorities">Priorities</div>
+        <div class="mstab" data-ms="Ticket Statuses">Ticket Statuses</div>
+        <div class="mstab" data-ms="Project Statuses">Project Statuses</div>
+        <div class="mstab" data-ms="Vendors">Vendors</div>
+        <div class="mstab" data-ms="Training Categories">Training Categories</div>
+      </div>
+      <div class="panel"><div class="body"><table><thead><tr><th>Value</th><th>Active</th><th>Notes</th></tr></thead><tbody id="msRows"></tbody></table></div></div>
+    </section>
+
+    <!-- ============ ADMIN ============ -->
+    <section class="view" id="view-admin">
+      <div class="page-head"><div><h1>Administration</h1><p>Users, roles, permissions, system settings</p></div>
+      <button class="btn primary" onclick="alert('Mockup: Invite User — name, company email, department, teams, role.')">+ Invite User</button></div>
+      <div class="mstabs"><div class="mstab active">Users (52)</div><div class="mstab">Roles</div><div class="mstab">Permissions</div><div class="mstab">Settings</div><div class="mstab">Audit Log</div></div>
+      <div class="panel"><div class="body"><table>
+        <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Role</th><th>Status</th></tr></thead>
+        <tbody id="userRows"></tbody>
+      </table></div></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Detail drawer -->
+<div class="drawer-scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <h2 id="dTitle">Ticket</h2>
+      <div class="sub" id="dSub"></div>
+    </div>
+    <button class="close-x" id="dClose">&times;</button>
+  </div>
+  <div class="drawer-body" id="dBody"></div>
+</aside>
+
+<script>
+// ---------- Dummy data ----------
+const tickets = [
+  { id:'TKT-0231', subj:'GL posting fails for September invoices', type:'ERP Issue', req:'Sara K.', asg:'Talha A.', pri:'High', st:'progress', upd:'2h ago', dept:'Finance', team:'ERP Support' },
+  { id:'TKT-0230', subj:'New laptop for onboarding — Warehouse', type:'Procurement Request', req:'Omar D.', asg:'Purchasing', pri:'Normal', st:'assigned', upd:'5h ago', dept:'Warehouse', team:'Ops' },
+  { id:'TKT-0229', subj:'Cannot log in to ERP after password reset', type:'Access / Account Request', req:'Lena M.', asg:'Talha A.', pri:'Urgent', st:'waiting', upd:'1d ago', dept:'Sales', team:'ERP Support' },
+  { id:'TKT-0228', subj:'Request ERP invoicing training for 3 staff', type:'Training Request', req:'HR Team', asg:'—', pri:'Low', st:'new', upd:'1d ago', dept:'HR', team:'—' },
+  { id:'TKT-0227', subj:'Printer on 2nd floor not responding', type:'IT / Computer Issue', req:'Yusuf A.', asg:'IT Desk', pri:'Normal', st:'resolved', upd:'2d ago', dept:'Management', team:'IT' },
+  { id:'TKT-0226', subj:'Add R&D as a department in the system', type:'General Internal Request', req:'Nadia F.', asg:'Super Admin', pri:'', st:'closed', upd:'3d ago', dept:'Management', team:'—' },
+  { id:'TKT-0225', subj:'Stock report totals do not match warehouse count', type:'ERP Issue', req:'Omar D.', asg:'Talha A.', pri:'High', st:'progress', upd:'3d ago', dept:'Warehouse', team:'ERP Support' },
+  { id:'TKT-0224', subj:'VPN access for remote finance user', type:'Access / Account Request', req:'Sara K.', asg:'IT Desk', pri:'Normal', st:'assigned', upd:'4d ago', dept:'Finance', team:'IT' },
+];
+const stMap = { new:['New','t-new'], assigned:['Assigned','t-assigned'], progress:['In Progress','t-progress'], waiting:['Waiting for User','t-waiting'], resolved:['Resolved','t-resolved'], closed:['Closed','t-closed'] };
+const priMap = { 'Low':'t-low','Normal':'t-normal','High':'t-high','Urgent':'t-urgent','':'' };
+
+const projects = [
+  { name:'B2B Sales Development', type:'Sales Initiative', owner:'Sales Lead', prog:55, date:'30 Nov 2026', st:['In Progress','t-progress'] },
+  { name:'ERP Month-End Stabilisation', type:'Operations', owner:'Talha A.', prog:70, date:'15 Oct 2026', st:['In Progress','t-progress'] },
+  { name:'Warehouse Barcode Rollout', type:'IT Rollout', owner:'Omar D.', prog:30, date:'20 Dec 2026', st:['At Risk','t-high'] },
+  { name:'HR Onboarding Revamp', type:'HR', owner:'Nadia F.', prog:85, date:'12 Sep 2026', st:['In Progress','t-progress'] },
+  { name:'Office 365 Migration', type:'IT Rollout', owner:'IT Desk', prog:15, date:'01 Sep 2026', st:['Delayed','t-waiting'] },
+  { name:'Supplier Consolidation', type:'Procurement', owner:'Purchasing', prog:45, date:'30 Oct 2026', st:['In Progress','t-progress'] },
+];
+
+const tasks = {
+  todo:[['Build target-customer list','B2B Sales · Sara K.'],['Draft barcode SOP','Warehouse Rollout · Omar D.'],['Collect vendor W-9s','Supplier Consolidation · Purchasing']],
+  prog:[['Prepare sales presentation','B2B Sales · Sales Lead'],['Test GL posting patch','ERP Stabilisation · Talha A.']],
+  review:[['Onboarding checklist v2','HR Revamp · Nadia F.']],
+  done:[['Migrate 5 pilot mailboxes','O365 Migration · IT Desk'],['Approve barcode scanner model','Warehouse Rollout · Omar D.']]
+};
+
+const training = [
+  { topic:'ERP Invoicing Basics', cat:'ERP', trainer:'Talha A.', part:'3', date:'11 Sep 2026', st:['Waiting for Employee Ack.','t-waiting'] },
+  { topic:'Warehouse Scanner Handling', cat:'Operations', trainer:'Omar D.', part:'8', date:'15 Sep 2026', st:['Scheduled','t-assigned'] },
+  { topic:'Data Privacy Refresher', cat:'Compliance', trainer:'Nadia F.', part:'52', date:'22 Sep 2026', st:['Requested','t-new'] },
+  { topic:'Sales CRM Deep Dive', cat:'Sales', trainer:'Sales Lead', part:'6', date:'02 Sep 2026', st:['Completed','t-resolved'] },
+];
+
+const procurement = [
+  { id:'PR-0142', item:'12x Staff Laptops (onboarding)', type:'Product', req:'Omar D.', dept:'Warehouse', val:'$14,400', stage:['Awaiting Director','t-high'] },
+  { id:'PR-0141', item:'Annual antivirus licences', type:'Service', req:'IT Desk', dept:'IT', val:'$3,200', stage:['With Purchasing','t-assigned'] },
+  { id:'PR-0140', item:'Forklift maintenance contract', type:'Service', req:'Omar D.', dept:'Warehouse', val:'$5,800', stage:['Awaiting Supervisor','t-new'] },
+  { id:'PR-0139', item:'Meeting room display + mount', type:'Product', req:'Nadia F.', dept:'HR', val:'$900', stage:['Delivered','t-resolved'] },
+  { id:'PR-0138', item:'Marketing print — trade show', type:'Service', req:'Sales Lead', dept:'Sales', val:'$2,100', stage:['With Purchasing','t-assigned'] },
+];
+
+const notifs = [
+  ['@mention','Sara K. mentioned you on TKT-0231','12 min ago',true],
+  ['Approval','PR-0142 needs Director approval','1h ago',true],
+  ['Assignment','TKT-0229 was assigned to you','3h ago',true],
+  ['Meeting','Invitation: B2B Sales Review — Thu 14:00','5h ago',true],
+  ['Training','Acknowledgement required: ERP Invoicing Basics','1d ago',true],
+  ['Status','TKT-0227 moved to Resolved','2d ago',false],
+  ['Activity','Activity due tomorrow: Call ERP vendor','2d ago',false],
+];
+
+const users = [
+  ['Talha Affan','talha@company.com','IT','Admin','Active'],
+  ['Sara Khan','sara.k@company.com','Finance','Team Member','Active'],
+  ['Omar Dar','omar.d@company.com','Warehouse','Supervisor','Active'],
+  ['Nadia Farooq','nadia.f@company.com','HR','Supervisor','Active'],
+  ['Lena Marom','lena.m@company.com','Sales','Employee','Active'],
+  ['Yusuf Ali','yusuf.a@company.com','Management','Director','Active'],
+  ['Priya Nair','priya.n@company.com','Purchase','Purchasing / Finance','Active'],
+  ['System Owner','root@company.com','IT','Super Admin','Active'],
+  ['Hassan Raza','hassan.r@company.com','R&D','Employee','Invited'],
+];
+
+const masterData = {
+  'Departments':[['Finance',1,''],['HR',1,''],['Sales',1,''],['Purchase',1,''],['Warehouse',1,''],['Management',1,''],['IT',1,''],['R&D',1,'Added 3 Sep 2026 by Super Admin'],['Logistics',0,'Draft']],
+  'Teams':[['ERP Support',1,'Cross-department'],['IT Desk',1,''],['Ops',1,''],['Sales Floor',1,''],['Finance Close',1,'']],
+  'Designations':[['Officer',1,''],['Senior Officer',1,''],['Team Lead',1,''],['Manager',1,''],['Head of Department',1,'']],
+  'Ticket Types':[['ERP Issue',1,''],['IT / Computer Issue',1,''],['Training Request',1,''],['Procurement Request',1,''],['Access / Account Request',1,''],['General Internal Request',1,'']],
+  'Priorities':[['Low',1,'Optional'],['Normal',1,'Default'],['High',1,''],['Urgent',1,'']],
+  'Ticket Statuses':[['New',1,''],['Assigned',1,''],['In Progress',1,''],['Waiting for User',1,''],['Resolved',1,''],['Closed',1,''],['Waiting for Vendor',0,'Future'],['Escalated',0,'Future']],
+  'Project Statuses':[['Planned',1,''],['In Progress',1,''],['At Risk',1,''],['Delayed',1,''],['On Hold',1,''],['Completed',1,'']],
+  'Vendors':[['ERP Partner Co.',1,'Support contract'],['TechSupply Ltd.',1,'Hardware'],['PrintWorks',1,''],['SecureSoft',1,'Licences']],
+  'Training Categories':[['ERP',1,''],['Operations',1,''],['Compliance',1,''],['Sales',1,''],['IT Security',1,'']],
+};
+
+// ---------- Renderers ----------
+const el = (t,c,h) => { const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e; };
+function ticketRow(t, compact){
+  const [sl,sc] = stMap[t.st];
+  const pr = t.pri ? `<span class="tag ${priMap[t.pri]}">${t.pri}</span>` : '<span class="muted">—</span>';
+  const tr = el('tr');
+  tr.innerHTML = compact
+    ? `<td style="font-weight:600">${t.id}</td><td>${t.subj}</td><td><span class="tag ${sc}">${sl}</span></td>`
+    : `<td style="font-weight:600">${t.id}</td><td>${t.subj}</td><td>${t.type}</td><td>${t.req}</td><td>${t.asg}</td><td>${pr}</td><td><span class="tag ${sc}">${sl}</span></td><td class="muted">${t.upd}</td>`;
+  tr.onclick = () => openTicket(t);
+  return tr;
+}
+document.getElementById('ticketRows').append(...tickets.map(t=>ticketRow(t,false)));
+document.getElementById('dashTickets').append(...tickets.slice(0,5).map(t=>ticketRow(t,true)));
+document.getElementById('myTickets').append(...tickets.filter(t=>t.asg==='Talha A.').map(t=>ticketRow(t,true)));
+
+document.getElementById('projectRows').append(...projects.map(p=>{
+  const tr = el('tr');
+  tr.innerHTML = `<td style="font-weight:600">${p.name}</td><td>${p.type}</td><td>${p.owner}</td>
+    <td><div style="background:var(--border);border-radius:6px;height:8px;width:120px;overflow:hidden"><div style="background:var(--primary);height:100%;width:${p.prog}%"></div></div><span class="muted">${p.prog}%</span></td>
+    <td class="muted">${p.date}</td><td><span class="tag ${p.st[1]}">${p.st[0]}</span></td>`;
+  tr.onclick = () => openProject(p);
+  return tr;
+}));
+
+function taskCards(arr){ return arr.map(([t,m])=>{ const d=el('div','list-row',`<div><div>${t}</div><div class="muted">${m}</div></div>`); return d; }); }
+document.getElementById('tasksTodo').append(...taskCards(tasks.todo));
+document.getElementById('tasksProg').append(...taskCards(tasks.prog));
+document.getElementById('tasksReview').append(...taskCards(tasks.review));
+document.getElementById('tasksDone').append(...taskCards(tasks.done));
+
+document.getElementById('trainingRows').append(...training.map(t=>{
+  const tr = el('tr');
+  tr.innerHTML = `<td style="font-weight:600">${t.topic}</td><td>${t.cat}</td><td>${t.trainer}</td><td>${t.part}</td><td class="muted">${t.date}</td><td><span class="tag ${t.st[1]}">${t.st[0]}</span></td>`;
+  tr.onclick = () => openTraining(t);
+  return tr;
+}));
+
+document.getElementById('procRows').append(...procurement.map(p=>{
+  const tr = el('tr');
+  tr.innerHTML = `<td style="font-weight:600">${p.id}</td><td>${p.item}</td><td>${p.type}</td><td>${p.req}</td><td>${p.dept}</td><td>${p.val}</td><td><span class="tag ${p.stage[1]}">${p.stage[0]}</span></td>`;
+  tr.onclick = () => openProc(p);
+  return tr;
+}));
+
+document.getElementById('notifList').append(...notifs.map(([k,txt,time,unread])=>{
+  const d = el('div','list-row'+(unread?' unread':''), `<span class="tag t-normal">${k}</span> <span>${txt}</span> <span class="muted" style="margin-left:auto">${time}</span>`);
+  if(unread) d.style.background = '#f0f7ff';
+  return d;
+}));
+
+document.getElementById('userRows').append(...users.map(u=>{
+  const tr = el('tr');
+  const init = u[0].split(' ').map(x=>x[0]).join('').slice(0,2);
+  tr.innerHTML = `<td><span class="avatar-sm">${init}</span>${u[0]}</td><td class="muted">${u[1]}</td><td>${u[2]}</td><td>${u[3]}</td><td><span class="tag ${u[4]==='Active'?'t-resolved':'t-new'}">${u[4]}</span></td>`;
+  return tr;
+}));
+
+// Reports bars
+function barList(container, data){
+  const max = Math.max(...data.map(d=>d[1]));
+  data.forEach(([label,val])=>{
+    const row = el('div','list-row', `<span style="width:130px">${label}</span>
+      <div style="flex:1;background:var(--border);border-radius:6px;height:10px;overflow:hidden"><div style="background:var(--primary);height:100%;width:${val/max*100}%"></div></div>
+      <span class="muted" style="width:34px;text-align:right">${val}</span>`);
+    container.append(row);
+  });
+}
+barList(document.getElementById('repDept'), [['Finance',72],['Warehouse',58],['Sales',41],['IT',96],['HR',24],['Management',27]]);
+barList(document.getElementById('repStatus'), [['New',6],['Assigned',5],['In Progress',9],['Waiting',5],['Resolved',18],['Closed',275]]);
+
+// Calendar
+const cal = document.getElementById('calendar');
+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(d=>cal.append(el('div','cell head',d)));
+const events = { 2:['Sales CRM Deep Dive'], 9:['Weekly IT Sync'], 10:['B2B Sales Review'], 11:['ERP Invoicing Training'], 15:['Scanner Handling'], 18:['Mgmt Review'], 22:['Data Privacy Refresher'], 25:['Month-End Close'] };
+for(let i=1;i<=30;i++){
+  const c = el('div','cell', `<div class="d">${i}</div>`);
+  (events[i]||[]).forEach(ev=>{ const e=el('div','evt',ev); e.onclick=()=>alert('Mockup meeting: '+ev+'\\nRSVP, agenda, minutes and action items would open here.'); c.append(e); });
+  cal.append(c);
+}
+
+// ---------- Navigation ----------
+const navItems = document.querySelectorAll('.nav-item');
+navItems.forEach(n => n.onclick = () => {
+  navItems.forEach(x=>x.classList.remove('active'));
+  n.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+n.dataset.view).classList.add('active');
+  document.getElementById('sidebar').classList.remove('open');
+  document.querySelector('.main').scrollTop = 0;
+});
+document.getElementById('menuToggle').onclick = () => document.getElementById('sidebar').classList.toggle('open');
+function goView(v){ document.querySelector(`.nav-item[data-view="${v}"]`).click(); }
+document.getElementById('notifBtn').onclick = () => goView('notifications');
+document.getElementById('profileBtn').onclick = () => alert('Mockup: profile menu — My Work, Settings, Sign out.');
+
+// ---------- Drawer ----------
+const drawer = document.getElementById('drawer'), scrim = document.getElementById('scrim');
+function openDrawer(){ drawer.classList.add('open'); scrim.classList.add('open'); }
+function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('open'); }
+document.getElementById('dClose').onclick = closeDrawer;
+scrim.onclick = closeDrawer;
+
+function chatterHTML(items){
+  return `<div class="chatter"><h4>Chatter &amp; Activity</h4>
+    <div class="compose"><textarea placeholder="Write a comment… use @ to mention"></textarea><button class="btn primary" onclick="addComment(this)">Send</button></div>
+    <div class="feed">${items.map(it=>`<div class="feed-item ${it[0]==='sys'?'system':''}">
+      <span class="avatar-sm">${it[0]==='sys'?'•':it[1].split(' ').map(x=>x[0]).join('').slice(0,2)}</span>
+      <div><div class="meta">${it[0]==='sys'?'System':it[1]} · ${it[2]}</div><div class="text">${it[3]}</div></div></div>`).join('')}</div></div>`;
+}
+function addComment(btn){
+  const ta = btn.previousElementSibling;
+  if(!ta.value.trim()) return;
+  const feed = btn.closest('.chatter').querySelector('.feed');
+  feed.insertAdjacentHTML('afterbegin', `<div class="feed-item"><span class="avatar-sm">TA</span><div><div class="meta">Talha A. · just now</div><div class="text">${ta.value.replace(/</g,'&lt;')}</div></div></div>`);
+  ta.value='';
+}
+
+function openTicket(t){
+  const [sl] = stMap[t.st];
+  document.getElementById('dTitle').textContent = t.id + ' — ' + t.subj;
+  document.getElementById('dSub').textContent = t.type + ' · visibility: Team (' + (t.team==='—'?'private':t.team) + ')';
+  document.getElementById('dBody').innerHTML = `
+    <div class="steps">
+      ${['New','Assigned','In Progress','Waiting for User','Resolved','Closed'].map(s=>{
+        const cur = s===sl; const order=['New','Assigned','In Progress','Waiting for User','Resolved','Closed'];
+        const done = order.indexOf(s) < order.indexOf(sl);
+        return `<span class="step ${cur?'active':''} ${done?'done':''}">${s}</span>`;
+      }).join('')}
+    </div>
+    <dl class="kv">
+      <dt>Requester</dt><dd>${t.req} · ${t.dept}</dd>
+      <dt>Assignee</dt><dd>${t.asg}</dd>
+      <dt>Priority</dt><dd>${t.pri||'— (optional, left blank)'}</dd>
+      <dt>Team</dt><dd>${t.team}</dd>
+      <dt>Created</dt><dd>4 Sep 2026, 09:14 · by ${t.req}</dd>
+      <dt>Last update</dt><dd>${t.upd}</dd>
+    </dl>
+    ${t.type==='ERP Issue' ? `<dl class="kv">
+      <dt>ERP module</dt><dd>General Ledger</dd>
+      <dt>Trying to do</dt><dd>Post September customer invoices</dd>
+      <dt>What went wrong</dt><dd>Batch stops at invoice 41 with a validation error</dd>
+      <dt>Error message</dt><dd>"Account 4000-01 is not open for the selected period"</dd>
+      <dt>Attachments</dt><dd>error-screenshot.png · gl-batch-log.txt</dd>
+    </dl>`:''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn" onclick="alert('Mockup: change status')">Change Status</button>
+      <button class="btn" onclick="alert('Mockup: reassign')">Reassign</button>
+      <button class="btn" onclick="alert('Mockup: add follower / mention')">Add Follower</button>
+      <button class="btn" onclick="alert('Mockup: close ticket — records who closed it and when. Reopen is Admin-only with mandatory reason.')">Close Ticket</button>
+    </div>
+    ${chatterHTML([
+      ['sys','','4 Sep 09:14','Ticket created by '+t.req],
+      ['sys','','4 Sep 09:40','Status changed: New → Assigned · assignee set to '+t.asg],
+      [t.asg,t.asg,'4 Sep 11:02','Reproduced the issue. Looks like the GL period was not opened after month rollover.'],
+      ['Sara K.','Sara K.','4 Sep 13:20','@'+t.asg+' any update? Finance close is blocked.'],
+      ['sys','','5 Sep 08:30','Status changed: Assigned → In Progress'],
+    ])}`;
+  openDrawer();
+}
+
+function openProject(p){
+  document.getElementById('dTitle').textContent = p.name;
+  document.getElementById('dSub').textContent = p.type + ' · owner ' + p.owner + ' · target ' + p.date;
+  document.getElementById('dBody').innerHTML = `
+    <dl class="kv">
+      <dt>Status</dt><dd><span class="tag ${p.st[1]}">${p.st[0]}</span></dd>
+      <dt>Progress</dt><dd>${p.prog}%</dd>
+      <dt>Team</dt><dd>Sara K., Sales Lead, Lena M.</dd>
+      <dt>Start date</dt><dd>1 Aug 2026</dd>
+      <dt>Target date</dt><dd>${p.date}</dd>
+    </dl>
+    <div class="panel" style="margin-bottom:16px"><h3>Tasks</h3><div class="body">
+      <ul class="checklist" style="padding:0 16px">
+        <li class="done"><input type="checkbox" checked><span>Create target-customer list</span></li>
+        <li class="done"><input type="checkbox" checked><span>Prepare presentation</span></li>
+        <li><input type="checkbox"><span>Schedule customer meetings</span></li>
+        <li><input type="checkbox"><span>Send quotations</span></li>
+        <li><input type="checkbox"><span>Follow up &amp; finalize agreement</span></li>
+      </ul>
+    </div></div>
+    ${chatterHTML([
+      ['sys','','1 Aug 10:00','Project created by '+p.owner],
+      [p.owner,p.owner,'20 Aug 15:12','Presentation draft ready, shared with the team for review.'],
+      ['sys','','1 Sep 09:00','Task "Prepare presentation" marked complete'],
+    ])}`;
+  openDrawer();
+}
+
+function openTraining(t){
+  document.getElementById('dTitle').textContent = t.topic;
+  document.getElementById('dSub').textContent = t.cat + ' · trainer ' + t.trainer + ' · ' + t.date;
+  document.getElementById('dBody').innerHTML = `
+    <div class="steps">
+      ${['Requested','Scheduled','In Progress','Trainer Checklist','Waiting for Employee Ack.','Completed'].map(s=>
+        `<span class="step ${s===t.st[0]?'active':''}">${s}</span>`).join('')}
+    </div>
+    <dl class="kv">
+      <dt>Participants</dt><dd>${t.part} employees</dd>
+      <dt>Materials</dt><dd>erp-invoicing-guide.pdf · session-recording.mp4</dd>
+      <dt>Schedule</dt><dd>${t.date}, 14:00–15:30</dd>
+    </dl>
+    <div class="panel" style="margin-bottom:16px"><h3>Trainer Checklist</h3><div class="body" style="padding:0 16px">
+      <ul class="checklist">
+        <li class="done"><input type="checkbox" checked><span>Walk through invoice creation</span></li>
+        <li class="done"><input type="checkbox" checked><span>Demonstrate credit notes</span></li>
+        <li><input type="checkbox"><span>Practice: each participant posts a test invoice</span></li>
+        <li><input type="checkbox"><span>Q&amp;A and common errors</span></li>
+      </ul>
+    </div></div>
+    <div class="banner">Employee acknowledgement is required before this training is marked <b>Completed</b>.</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" onclick="alert('Mockup: recorded — Confirm Training Completed by employee, with date/time.')">Confirm Completed</button>
+      <button class="btn" onclick="alert('Mockup: recorded — Training Incomplete / Need Follow-up.')">Need Follow-up</button>
+    </div>`;
+  openDrawer();
+}
+
+function openProc(p){
+  document.getElementById('dTitle').textContent = p.id + ' — ' + p.item;
+  document.getElementById('dSub').textContent = p.type + ' request · ' + p.req + ' · ' + p.dept;
+  document.getElementById('dBody').innerHTML = `
+    <div class="steps">
+      <span class="step done">Employee</span>
+      <span class="step ${p.stage[0]==='Awaiting Supervisor'?'active':'done'}">Supervisor</span>
+      <span class="step ${p.stage[0]==='Awaiting Director'?'active':''}">Director (if needed)</span>
+      <span class="step ${p.stage[0]==='With Purchasing'?'active':''}">Purchasing / Finance</span>
+      <span class="step ${p.stage[0]==='Delivered'?'active':''}">Delivered</span>
+    </div>
+    <dl class="kv">
+      <dt>Business reason</dt><dd>Onboarding of 12 new warehouse staff in Q4</dd>
+      <dt>Quantity</dt><dd>12</dd>
+      <dt>Estimated value</dt><dd>${p.val}</dd>
+      <dt>Attachments</dt><dd>spec-sheet.pdf</dd>
+    </dl>
+    <div class="panel" style="margin-bottom:16px"><h3>Vendor Quotations</h3><div class="body"><table>
+      <thead><tr><th>Vendor</th><th>Amount</th><th>Delivery</th><th>Validity</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>TechSupply Ltd.</td><td>$14,400</td><td>2 weeks</td><td>30 days</td><td><span class="tag t-resolved">Selected</span></td></tr>
+        <tr><td>CompDirect</td><td>$15,100</td><td>1 week</td><td>15 days</td><td><span class="tag t-closed">Rejected</span></td></tr>
+        <tr><td>OfficePlus</td><td>$14,950</td><td>3 weeks</td><td>45 days</td><td><span class="tag t-closed">Rejected</span></td></tr>
+      </tbody>
+    </table></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" onclick="alert('Mockup: Supervisor approves → routes to Purchasing/Finance.')">Approve to Purchasing</button>
+      <button class="btn" onclick="alert('Mockup: Supervisor forwards to Director for higher approval.')">Forward to Director</button>
+      <button class="btn" onclick="alert('Mockup: Reject with reason (recorded in audit history).')">Reject</button>
+    </div>
+    ${chatterHTML([
+      ['sys','','2 Sep 09:00','Request created by '+p.req],
+      ['sys','','2 Sep 16:30','Supervisor review requested'],
+      ['Omar D.','Omar D.','3 Sep 10:15','Confirmed headcount with HR — 12 is correct.'],
+    ])}`;
+  openDrawer();
+}
+
+function rsvp(btn, val){
+  const row = btn.closest('.list-row');
+  row.querySelector('span:last-child').innerHTML = `<span class="tag ${val==='Accepted'?'t-resolved':val==='Declined'?'t-waiting':'t-progress'}">${val}</span> <span class="muted">recorded ${new Date().toLocaleTimeString()}</span>`;
+}
+
+// Master data
+let msCurrent = 'Departments';
+function renderMS(){
+  const rows = masterData[msCurrent] || [];
+  document.getElementById('msRows').innerHTML = rows.map(([v,a,n])=>
+    `<td>${v}</td><td>${a?'<span class="tag t-resolved">Active</span>':'<span class="tag t-closed">Inactive</span>'}</td><td class="muted">${n||''}</td>`
+  ).map(r=>`<tr>${r}</tr>`).join('');
+}
+document.getElementById('msTabs').querySelectorAll('.mstab').forEach(tab=>{
+  tab.onclick = () => {
+    document.getElementById('msTabs').querySelectorAll('.mstab').forEach(x=>x.classList.remove('active'));
+    tab.classList.add('active'); msCurrent = tab.dataset.ms; renderMS();
+  };
+});
+document.getElementById('msAddBtn').onclick = () => {
+  const v = prompt('Add a new value to "'+msCurrent+'" (no developer needed):');
+  if(v){ (masterData[msCurrent] = masterData[msCurrent]||[]).push([v,1,'Added just now by Super Admin']); renderMS(); }
+};
+renderMS();
+
+// generic mstab toggles (non-master-data pages)
+document.querySelectorAll('.mstabs:not(#msTabs) .mstab').forEach(t=>{
+  t.onclick = () => { t.parentElement.querySelectorAll('.mstab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); };
+});
+</script>
+</body>
+</html>

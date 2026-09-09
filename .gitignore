@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+build/
+**/dist/
+**/build/
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+**/.env
+!**/.env.example
+
+# logs
+*.log
+npm-debug.log*
+logs/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Prisma
+**/prisma/*.db
