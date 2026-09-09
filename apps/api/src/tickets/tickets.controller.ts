@@ -16,8 +16,11 @@ import {
 import { Roles } from '../auth/roles.decorator.js';
 import {
   AssignTicketDto,
+  ChangeStatusDto,
+  CloseTicketDto,
   CreateTicketDto,
   ListTicketsQuery,
+  ReopenTicketDto,
   UpdateTicketDto,
 } from './tickets.dto.js';
 
@@ -99,5 +102,38 @@ export class TicketsController {
     @Body() dto: AssignTicketDto,
   ) {
     return this.tickets.assign(id, userId, roles, dto.assigneeId);
+  }
+
+  @Post('tickets/:id/status')
+  @Roles()
+  changeStatus(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoles() roles: string[],
+    @Body() dto: ChangeStatusDto,
+  ) {
+    return this.tickets.changeStatus(id, userId, roles, dto.statusKey, dto.comment);
+  }
+
+  @Post('tickets/:id/close')
+  @Roles()
+  close(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoles() roles: string[],
+    @Body() dto: CloseTicketDto,
+  ) {
+    return this.tickets.close(id, userId, roles, dto.comment);
+  }
+
+  @Post('tickets/:id/reopen')
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  reopen(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoles() roles: string[],
+    @Body() dto: ReopenTicketDto,
+  ) {
+    return this.tickets.reopen(id, userId, roles, dto.reason);
   }
 }

@@ -44,3 +44,17 @@ export class UpdateTicketDto {
 export class AssignTicketDto {
   @IsOptional() @IsUUID() assigneeId?: string | null;
 }
+
+export class ChangeStatusDto {
+  @IsString() statusKey!: string;
+  @IsOptional() @IsString() comment?: string;
+}
+
+export class CloseTicketDto {
+  @IsOptional() @IsString() comment?: string;
+}
+
+export class ReopenTicketDto {
+  @IsString() @MinLength(3, { message: 'A reopen reason is required' })
+  reason!: string;
+}

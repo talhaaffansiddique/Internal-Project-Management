@@ -90,7 +90,7 @@ export default function AdminApp() {
 
       <div className="content">
         <header className="topbar">
-          <div className="phase">Phase 1.0.7 — tickets &amp; requests</div>
+          <div className="phase">Phase 1.0.8 — ticket status flow</div>
           <div className="who">
             <span className="avatar">{initials}</span>
             <div>

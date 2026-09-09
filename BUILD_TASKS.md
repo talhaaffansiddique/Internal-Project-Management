@@ -76,10 +76,19 @@ Each step restates scope + success criteria before code is written.
   *Done:* verified — visibility API suite + browser (admin sees 14, Lena sees
   her 2; open ticket, post comment, conditional fields render).
 
-- [ ] **1.0.8 — Ticket status flow + close/reopen**
-  New → Assigned → In Progress → Waiting for User → Resolved → Closed.
-  Records who closed + when. Reopen = Admin only, mandatory reason, audited.
-  *Done when:* close/reopen behave exactly per brief §8.4.
+- [x] **1.0.8 — Ticket status flow + close/reopen**
+  `POST /tickets/:id/status` — validated transitions (New→Assigned→In Progress
+  →Waiting for User→Resolved, plus sensible back-moves), optional comment,
+  STATUS_CHANGED audit (old→new), notifies requester + assignee + followers.
+  `POST /tickets/:id/close` — requester / assignee / admin; records closedBy +
+  closedAt; CLOSED audit. `POST /tickets/:id/reopen` — ADMIN only, reason
+  mandatory (min 3 chars), REOPENED audit with reason in meta, status → in_progress
+  (or new). `get()` now returns `allowedTransitions` + `permissions`.
+  Web: status bar on TicketDetail — status badge, "Move to…" dropdown, Close
+  button, Reopen modal (reason). Status colour badges.
+  *Done:* verified — 12 API checks (invalid transition 400, unrelated user 403,
+  close-via-status 400, requester close, non-admin reopen 403, reopen-no-reason
+  400, reopen with reason) + browser status change + audit trail.
 
 - [ ] **1.0.9 — In-app notifications**
   Mentions, assignments, status changes, approvals, activity due dates.

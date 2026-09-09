@@ -14,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { AuditService } from '../shared/audit.service.js';
 import { NotificationsService } from '../shared/notifications.service.js';
 import { FollowersService } from '../shared/followers.service.js';
+import { CommentsService } from '../shared/comments.service.js';
 import { getForm } from './forms.js';
 import {
   CreateTicketDto,
@@ -22,6 +23,19 @@ import {
 } from './tickets.dto.js';
 
 const PRIVILEGED = ['ADMIN', 'SUPER_ADMIN'];
+
+/** Allowed status moves via the status endpoint (brief §8.4). "closed" is
+ *  reached only through close(), and left only through reopen(). */
+const TRANSITIONS: Record<string, string[]> = {
+  new: ['assigned', 'in_progress'],
+  assigned: ['in_progress', 'waiting_for_user', 'resolved'],
+  in_progress: ['assigned', 'waiting_for_user', 'resolved'],
+  waiting_for_user: ['in_progress', 'resolved'],
+  resolved: ['in_progress'],
+  closed: [],
+};
+
+const ticketNo = (n: number) => `TKT-${String(n).padStart(4, '0')}`;
 
 const DETAIL_INCLUDE = {
   requester: { select: { id: true, fullName: true, email: true } },
@@ -37,10 +51,56 @@ export class TicketsService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
     private readonly followers: FollowersService,
+    private readonly comments: CommentsService,
   ) {}
 
   private isPrivileged(roles: string[]) {
     return roles.some((r) => PRIVILEGED.includes(r));
+  }
+
+  private mayAct(
+    ticket: { requesterId: string; assigneeId: string | null },
+    userId: string,
+    roles: string[],
+  ) {
+    return (
+      this.isPrivileged(roles) ||
+      ticket.requesterId === userId ||
+      ticket.assigneeId === userId
+    );
+  }
+
+  private decorate<
+    T extends { type: string; statusKey: string; requesterId: string; assigneeId: string | null },
+  >(ticket: T, userId: string, roles: string[]) {
+    return {
+      ...ticket,
+      form: getForm(ticket.type) ?? null,
+      allowedTransitions: TRANSITIONS[ticket.statusKey] ?? [],
+      permissions: {
+        mayAct: this.mayAct(ticket, userId, roles),
+        isAdmin: this.isPrivileged(roles),
+      },
+    };
+  }
+
+  private async notifyWatchers(
+    ticket: { id: string; number: number; requesterId: string; assigneeId: string | null },
+    actorId: string,
+    title: string,
+  ) {
+    const ids = new Set<string>([ticket.requesterId]);
+    if (ticket.assigneeId) ids.add(ticket.assigneeId);
+    for (const f of await this.followers.followerIds(EntityType.TICKET, ticket.id)) {
+      ids.add(f);
+    }
+    ids.delete(actorId);
+    await this.notifications.notifyMany([...ids], {
+      type: NotificationType.STATUS_CHANGE,
+      title,
+      entityType: EntityType.TICKET,
+      entityId: ticket.id,
+    });
   }
 
   private async myTeamIds(userId: string): Promise<string[]> {
@@ -162,7 +222,7 @@ export class TicketsService {
       include: DETAIL_INCLUDE,
     });
     if (!ticket) throw new NotFoundException('Ticket not found');
-    return { ...ticket, form: getForm(ticket.type) ?? null };
+    return this.decorate(ticket, userId, roles);
   }
 
   private async validateMasterKey(typeKey: string, key: string, label: string) {
@@ -209,7 +269,7 @@ export class TicketsService {
       summary: `raised ticket TKT-${String(ticket.number).padStart(4, '0')}`,
       actorId: userId,
     });
-    return { ...ticket, form: getForm(ticket.type) ?? null };
+    return this.decorate(ticket, userId, []);
   }
 
   async update(
@@ -259,7 +319,7 @@ export class TicketsService {
       summary: 'edited ticket details',
       actorId: userId,
     });
-    return { ...ticket, form: getForm(ticket.type) ?? null };
+    return this.decorate(ticket, userId, roles);
   }
 
   async assign(
@@ -316,7 +376,137 @@ export class TicketsService {
       oldValue: existing.assigneeId,
       newValue: assigneeId ?? null,
     });
-    return { ...ticket, form: getForm(ticket.type) ?? null };
+    return this.decorate(ticket, userId, roles);
+  }
+
+  async changeStatus(
+    id: string,
+    userId: string,
+    roles: string[],
+    statusKey: string,
+    comment?: string,
+  ) {
+    const t = await this.prisma.ticket.findUnique({ where: { id } });
+    if (!t) throw new NotFoundException('Ticket not found');
+    if (!this.mayAct(t, userId, roles)) {
+      throw new ForbiddenException("You cannot change this ticket's status");
+    }
+    if (statusKey === 'closed') {
+      throw new BadRequestException('Use the Close action to close a ticket');
+    }
+    if (t.statusKey === 'closed') {
+      throw new BadRequestException('Reopen the ticket before changing its status');
+    }
+    const allowed = TRANSITIONS[t.statusKey] ?? [];
+    if (!allowed.includes(statusKey)) {
+      throw new BadRequestException(
+        `Cannot move from "${t.statusKey}" to "${statusKey}"`,
+      );
+    }
+    await this.validateMasterKey('ticket_statuses', statusKey, 'status');
+
+    const ticket = await this.prisma.ticket.update({
+      where: { id },
+      data: { statusKey },
+      include: DETAIL_INCLUDE,
+    });
+    await this.audit.record({
+      entityType: EntityType.TICKET,
+      entityId: id,
+      action: 'STATUS_CHANGED',
+      summary: `changed status: ${t.statusKey} → ${statusKey}`,
+      actorId: userId,
+      oldValue: t.statusKey,
+      newValue: statusKey,
+    });
+    if (comment?.trim()) {
+      await this.comments.post(EntityType.TICKET, id, userId, {
+        body: comment.trim(),
+      });
+    }
+    await this.notifyWatchers(
+      ticket,
+      userId,
+      `${ticketNo(ticket.number)} is now "${statusKey}"`,
+    );
+    return this.decorate(ticket, userId, roles);
+  }
+
+  async close(id: string, userId: string, roles: string[], comment?: string) {
+    const t = await this.prisma.ticket.findUnique({ where: { id } });
+    if (!t) throw new NotFoundException('Ticket not found');
+    if (!this.mayAct(t, userId, roles)) {
+      throw new ForbiddenException('You are not allowed to close this ticket');
+    }
+    if (t.statusKey === 'closed') {
+      throw new BadRequestException('Ticket is already closed');
+    }
+    const ticket = await this.prisma.ticket.update({
+      where: { id },
+      data: { statusKey: 'closed', closedById: userId, closedAt: new Date() },
+      include: DETAIL_INCLUDE,
+    });
+    await this.audit.record({
+      entityType: EntityType.TICKET,
+      entityId: id,
+      action: 'CLOSED',
+      summary: 'closed the ticket',
+      actorId: userId,
+      oldValue: t.statusKey,
+      newValue: 'closed',
+    });
+    if (comment?.trim()) {
+      await this.comments.post(EntityType.TICKET, id, userId, {
+        body: comment.trim(),
+      });
+    }
+    await this.notifyWatchers(
+      ticket,
+      userId,
+      `${ticketNo(ticket.number)} was closed`,
+    );
+    return this.decorate(ticket, userId, roles);
+  }
+
+  async reopen(id: string, userId: string, roles: string[], reason: string) {
+    if (!this.isPrivileged(roles)) {
+      throw new ForbiddenException('Only an Admin can reopen a closed ticket');
+    }
+    const t = await this.prisma.ticket.findUnique({ where: { id } });
+    if (!t) throw new NotFoundException('Ticket not found');
+    if (t.statusKey !== 'closed') {
+      throw new BadRequestException('Only a closed ticket can be reopened');
+    }
+    if (!reason?.trim()) {
+      throw new BadRequestException('A reopen reason is required');
+    }
+    const nextStatus = t.assigneeId ? 'in_progress' : 'new';
+    const ticket = await this.prisma.ticket.update({
+      where: { id },
+      data: {
+        statusKey: nextStatus,
+        closedById: null,
+        closedAt: null,
+        reopenReason: reason.trim(),
+      },
+      include: DETAIL_INCLUDE,
+    });
+    await this.audit.record({
+      entityType: EntityType.TICKET,
+      entityId: id,
+      action: 'REOPENED',
+      summary: `reopened the ticket — reason: ${reason.trim()}`,
+      actorId: userId,
+      oldValue: 'closed',
+      newValue: nextStatus,
+      meta: { reason: reason.trim() },
+    });
+    await this.notifyWatchers(
+      ticket,
+      userId,
+      `${ticketNo(ticket.number)} was reopened`,
+    );
+    return this.decorate(ticket, userId, roles);
   }
 
   async myTickets(userId: string) {

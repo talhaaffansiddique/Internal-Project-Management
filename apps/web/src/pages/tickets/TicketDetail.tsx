@@ -55,12 +55,40 @@ export default function TicketDetail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  const [statusBusy, setStatusBusy] = useState(false)
+  const [reopening, setReopening] = useState(false)
+
   async function assign(assigneeId: string) {
     await api(`/tickets/${id}/assignee`, {
       method: 'PATCH',
       body: JSON.stringify({ assigneeId: assigneeId || null }),
     })
     await load()
+  }
+
+  async function changeStatus(statusKey: string) {
+    if (!statusKey) return
+    setStatusBusy(true)
+    try {
+      await api(`/tickets/${id}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ statusKey }),
+      })
+      await load()
+    } finally {
+      setStatusBusy(false)
+    }
+  }
+
+  async function closeTicket() {
+    if (!confirm('Close this ticket? It will record that you closed it, and when.')) return
+    setStatusBusy(true)
+    try {
+      await api(`/tickets/${id}/close`, { method: 'POST', body: '{}' })
+      await load()
+    } finally {
+      setStatusBusy(false)
+    }
   }
 
   if (error) {
@@ -92,16 +120,69 @@ export default function TicketDetail({
         </div>
       </div>
 
+      <div className="status-bar">
+        <span className={`badge status-${ticket.statusKey}`}>
+          {STATUS_LABEL[ticket.statusKey] ?? ticket.statusKey}
+        </span>
+
+        {ticket.statusKey === 'closed' ? (
+          <>
+            <span className="muted small">
+              Closed by {ticket.closedBy?.fullName ?? '—'}
+              {ticket.closedAt &&
+                ` on ${new Date(ticket.closedAt).toLocaleString()}`}
+            </span>
+            {ticket.permissions?.isAdmin && (
+              <button
+                className="btn"
+                disabled={statusBusy}
+                onClick={() => setReopening(true)}
+              >
+                Reopen
+              </button>
+            )}
+          </>
+        ) : (
+          ticket.permissions?.mayAct && (
+            <>
+              {(ticket.allowedTransitions ?? []).length > 0 && (
+                <select
+                  disabled={statusBusy}
+                  defaultValue=""
+                  onChange={(e) => changeStatus(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Move to…
+                  </option>
+                  {(ticket.allowedTransitions ?? []).map((s) => (
+                    <option key={s} value={s}>
+                      {STATUS_LABEL[s] ?? s}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <button
+                className="btn danger"
+                disabled={statusBusy}
+                onClick={closeTicket}
+              >
+                Close ticket
+              </button>
+            </>
+          )
+        )}
+      </div>
+
+      {ticket.statusKey !== 'closed' && ticket.reopenReason && (
+        <p className="banner">
+          Reopened — reason: {ticket.reopenReason}
+        </p>
+      )}
+
       <div className="detail-grid">
         <div>
           <div className="card">
             <div className="kv">
-              <span>Status</span>
-              <b>
-                <span className="badge warn">
-                  {STATUS_LABEL[ticket.statusKey] ?? ticket.statusKey}
-                </span>
-              </b>
               <span>Priority</span>
               <b>{ticket.priority ?? <span className="muted">— not set</span>}</b>
               <span>Visibility</span>
@@ -187,7 +268,72 @@ export default function TicketDetail({
           }}
         />
       )}
+
+      {reopening && (
+        <ReopenModal
+          ticketId={id}
+          onClose={() => setReopening(false)}
+          onDone={() => {
+            setReopening(false)
+            void load()
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+function ReopenModal({
+  ticketId,
+  onClose,
+  onDone,
+}: {
+  ticketId: string
+  onClose: () => void
+  onDone: () => void
+}) {
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function submit() {
+    setBusy(true)
+    setError(null)
+    try {
+      await api(`/tickets/${ticketId}/reopen`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      })
+      onDone()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Reopen failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      title="Reopen ticket"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>Cancel</button>
+          <button
+            className="btn primary"
+            onClick={submit}
+            disabled={busy || reason.trim().length < 3}
+          >
+            {busy ? 'Reopening…' : 'Reopen'}
+          </button>
+        </>
+      }
+    >
+      <Field label="Reason (required)" hint="Recorded in the ticket history.">
+        <textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
+      </Field>
+      <ErrorText>{error}</ErrorText>
+    </Modal>
   )
 }
 

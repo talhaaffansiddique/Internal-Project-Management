@@ -122,5 +122,9 @@ export interface Ticket {
   assignee: { id: string; fullName: string; email: string } | null
   team: { id: string; name: string } | null
   closedBy?: { id: string; fullName: string } | null
+  closedAt?: string | null
+  reopenReason?: string | null
   form?: TicketForm | null
+  allowedTransitions?: string[]
+  permissions?: { mayAct: boolean; isAdmin: boolean }
 }

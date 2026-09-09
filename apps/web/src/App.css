@@ -244,6 +244,23 @@ table.grid tbody tr:hover { background: #f8fafc; }
 .kv select { border: 1px solid #cbd5e1; border-radius: 7px; padding: 5px 8px; font-size: 13px; }
 .tab-body { padding-top: 14px; }
 
+.status-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0 4px;
+}
+.status-bar select {
+  border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 8px; font-size: 13px;
+}
+.badge.status-new { background: #e0e7ff; color: #3730a3; }
+.badge.status-assigned { background: #cffafe; color: #155e75; }
+.badge.status-in_progress { background: #fef3c7; color: #92400e; }
+.badge.status-waiting_for_user { background: #fee2e2; color: #991b1b; }
+.badge.status-resolved { background: #dcfce7; color: #166534; }
+.badge.status-closed { background: #e2e8f0; color: #475569; }
+.banner {
+  background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+  padding: 8px 12px; border-radius: 8px; font-size: 12.5px; margin: 10px 0 0;
+}
+
 .compose { display: flex; gap: 8px; margin-bottom: 14px; }
 .compose textarea { flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; resize: vertical; }
 
