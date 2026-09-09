@@ -36,9 +36,15 @@ Each step restates scope + success criteria before code is written.
   *Done:* verified end to end — 13 API checks + browser flow (invite user →
   assign roles → create dept → create team → add member).
 
-- [ ] **1.0.5 — Master Data module**
-  Generic add/edit/deactivate of values for every configurable type.
-  *Done when:* Super Admin adds "R&D" as a department from the UI, no code change.
+- [x] **1.0.5 — Master Data module**
+  Generic `GET/POST/PATCH/DELETE /master-data/:type[/:id]` + `/:type/reorder`
+  (auto slug keys, hierarchy via parentId, system values deactivate-only).
+  Full CRUD for `/designations` and `/branches` (were read-only stubs).
+  All writes Super-Admin-only. Web: "Master Data" screen — type picker +
+  values table with add/edit/reorder/deactivate/delete.
+  *Done:* verified — 15 API checks (409 on system delete, 404 unknown type,
+  reorder, designation in-use guard) + browser flow (add "Critical" priority,
+  reorder, delete).
 
 - [ ] **1.0.6 — Shared building blocks**
   Attachments, chatter/comments, @mentions, followers, activities, audit trail —

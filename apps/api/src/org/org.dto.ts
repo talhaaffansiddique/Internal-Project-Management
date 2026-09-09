@@ -35,3 +35,23 @@ export class UpdateTeamDto {
 export class AddTeamMemberDto {
   @IsUUID() userId!: string;
 }
+
+export class CreateDesignationDto {
+  @IsString() @MinLength(2) name!: string;
+}
+
+export class UpdateDesignationDto {
+  @IsOptional() @IsString() @MinLength(2) name?: string;
+  @IsOptional() @IsBoolean() active?: boolean;
+}
+
+export class CreateBranchDto {
+  @IsString() @MinLength(2) name!: string;
+  @IsOptional() @IsString() address?: string;
+}
+
+export class UpdateBranchDto {
+  @IsOptional() @IsString() @MinLength(2) name?: string;
+  @IsOptional() @IsString() address?: string;
+  @IsOptional() @IsBoolean() active?: boolean;
+}

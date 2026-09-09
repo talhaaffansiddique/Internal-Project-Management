@@ -11,6 +11,36 @@ export interface Role {
 export interface Designation {
   id: string
   name: string
+  active?: boolean
+}
+
+export interface Branch {
+  id: string
+  name: string
+  address: string | null
+  active: boolean
+}
+
+export interface MasterDataType {
+  id: string
+  key: string
+  name: string
+  description?: string
+  allowsHierarchy: boolean
+  isSystem: boolean
+  _count?: { values: number }
+}
+
+export interface MasterDataValue {
+  id: string
+  typeId: string
+  key: string
+  label: string
+  parentId: string | null
+  sortOrder: number
+  active: boolean
+  isSystem: boolean
+  meta?: unknown
 }
 
 export interface Department {

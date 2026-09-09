@@ -5,6 +5,7 @@ import { HealthModule } from './health/health.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { OrgModule } from './org/org.module.js';
+import { MasterDataModule } from './master-data/master-data.module.js';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { OrgModule } from './org/org.module.js';
     AuthModule,
     UsersModule,
     OrgModule,
+    MasterDataModule,
     HealthModule,
   ],
 })

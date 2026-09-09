@@ -3,14 +3,16 @@ import { useAuth } from './auth'
 import Users from './pages/admin/Users'
 import Departments from './pages/admin/Departments'
 import Teams from './pages/admin/Teams'
+import MasterData from './pages/admin/MasterData'
 
-type View = 'dashboard' | 'users' | 'departments' | 'teams'
+type View = 'dashboard' | 'users' | 'departments' | 'teams' | 'masterdata'
 
 const NAV: { key: View; label: string; group: string }[] = [
   { key: 'dashboard', label: 'Dashboard', group: 'Main' },
   { key: 'users', label: 'Users', group: 'Administration' },
   { key: 'departments', label: 'Departments', group: 'Administration' },
   { key: 'teams', label: 'Teams', group: 'Administration' },
+  { key: 'masterdata', label: 'Master Data', group: 'Administration' },
 ]
 
 export default function AdminApp() {
@@ -58,7 +60,7 @@ export default function AdminApp() {
 
       <div className="content">
         <header className="topbar">
-          <div className="phase">Phase 1.0.4 — users, roles, departments, teams</div>
+          <div className="phase">Phase 1.0.5 — master data</div>
           <div className="who">
             <span className="avatar">{initials}</span>
             <div>
@@ -89,6 +91,7 @@ export default function AdminApp() {
           {view === 'users' && canAdmin && <Users />}
           {view === 'departments' && canAdmin && <Departments />}
           {view === 'teams' && canAdmin && <Teams />}
+          {view === 'masterdata' && canAdmin && <MasterData />}
         </main>
       </div>
     </div>
