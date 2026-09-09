@@ -20,9 +20,12 @@ Each step restates scope + success criteria before code is written.
   1 Super Admin user.
   *Done:* migration applied clean, seed is idempotent, data verified.
 
-- [ ] **1.0.3 — Authentication**
-  Email + password login, logout, refresh, `GET /auth/me`. Sessions tied to a person.
-  *Done when:* you can log in as a seeded user and hit a protected endpoint.
+- [x] **1.0.3 — Authentication**
+  JWT in an httpOnly cookie (7-day). `POST /auth/login`, `POST /auth/logout`,
+  `GET /auth/me`, `POST /auth/password/change`. Global guard protects every route
+  by default; `@Public()` opts out; `@CurrentUser()` helper for controllers.
+  React: login screen, auth context, logout.
+  *Done:* verified end to end (9 API checks + browser login→home→logout).
 
 - [ ] **1.0.4 — Users, Roles, Departments, Teams**
   Admin CRUD + role assignment + team membership. Access filtered by role.

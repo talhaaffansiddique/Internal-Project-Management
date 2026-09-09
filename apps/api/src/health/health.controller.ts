@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { Public } from '../auth/public.decorator.js';
 
 const DB_CHECK_TIMEOUT_MS = 3000;
 
@@ -7,6 +8,7 @@ const DB_CHECK_TIMEOUT_MS = 3000;
 export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
 
+  @Public()
   @Get()
   async check() {
     let db: 'connected' | 'disconnected' = 'disconnected';

@@ -1,54 +1,84 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import { useAuth } from './auth'
+import Login from './pages/Login'
+import { api } from './api'
 
-type Health = {
-  status: string
-  db: string
-  service: string
-  time: string
+type Health = { status: string; db: string; service: string; time: string }
+
+export default function App() {
+  const { user, loading, logout } = useAuth()
+
+  if (loading) {
+    return <div className="login-wrap"><p className="muted">Loading…</p></div>
+  }
+  if (!user) {
+    return <Login />
+  }
+  return <AuthedHome onLogout={logout} />
 }
 
-function App() {
+function AuthedHome({ onLogout }: { onLogout: () => void }) {
+  const { user } = useAuth()
   const [health, setHealth] = useState<Health | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/v1/health')
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json()
-      })
-      .then(setHealth)
-      .catch((e) => setError(String(e)))
+    api<Health>('/health').then(setHealth).catch(() => setHealth(null))
   }, [])
 
-  const dbOk = health?.db === 'connected'
+  const initials = user!.fullName
+    .split(' ')
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
 
   return (
     <div className="shell">
-      <h1>OpsHub</h1>
-      <p className="sub">Internal Company Operations &amp; Project Management Platform</p>
-      <p className="phase">Phase 1.0.1 — project scaffold</p>
+      <header className="topbar">
+        <div className="brand">
+          <span className="logo">OP</span> OpsHub
+        </div>
+        <div className="who">
+          <span className="avatar">{initials}</span>
+          <div>
+            <b>{user!.fullName}</b>
+            <div className="muted small">
+              {user!.roleNames.join(', ')} · {user!.primaryDepartment?.name ?? 'No department'}
+            </div>
+          </div>
+          <button className="ghost" onClick={onLogout}>Log out</button>
+        </div>
+      </header>
 
-      <div className="card">
-        <h2>Backend health check</h2>
-        {error && <p className="bad">Could not reach API: {error}</p>}
-        {!error && !health && <p className="muted">Checking…</p>}
-        {health && (
+      <main>
+        <p className="phase">Phase 1.0.3 — authentication</p>
+
+        <div className="card">
+          <h2>You are signed in</h2>
           <ul>
-            <li>API status: <b className={health.status === 'ok' ? 'ok' : 'bad'}>{health.status}</b></li>
-            <li>Database: <b className={dbOk ? 'ok' : 'bad'}>{health.db}</b></li>
-            <li>Service: {health.service}</li>
-            <li>Time: {health.time}</li>
+            <li>Email: {user!.email}</li>
+            <li>Roles: {user!.roles.join(', ')}</li>
+            <li>Teams: {user!.teams.length ? user!.teams.map((t) => t.name).join(', ') : '—'}</li>
+            <li>Last login: {user!.lastLoginAt ? new Date(user!.lastLoginAt).toLocaleString() : 'first time'}</li>
           </ul>
-        )}
-      </div>
+        </div>
 
-      <p className="muted small">
-        When both API status and Database show <b>green</b>, Step 1.0.1 is complete.
-      </p>
+        <div className="card">
+          <h2>Backend health (protected call succeeded)</h2>
+          {health ? (
+            <ul>
+              <li>API status: <b className={health.status === 'ok' ? 'ok' : 'bad'}>{health.status}</b></li>
+              <li>Database: <b className={health.db === 'connected' ? 'ok' : 'bad'}>{health.db}</b></li>
+            </ul>
+          ) : (
+            <p className="muted">Checking…</p>
+          )}
+        </div>
+
+        <p className="muted small">
+          Next step builds the Users, Roles, Departments &amp; Teams admin screens.
+        </p>
+      </main>
     </div>
   )
 }
-
-export default App
