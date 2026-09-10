@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './auth'
 import { api } from './api'
 import { NotificationBell } from './components/NotificationBell'
+import { APP_VERSION, APP_PHASE } from './version'
+import Dashboard from './pages/Dashboard'
 import Users from './pages/admin/Users'
 import Departments from './pages/admin/Departments'
 import Teams from './pages/admin/Teams'
@@ -93,11 +95,12 @@ export default function AdminApp() {
             })}
           </div>
         ))}
+        <div className="side-foot">{APP_VERSION}</div>
       </aside>
 
       <div className="content">
         <header className="topbar">
-          <div className="phase">Phase 1.0.9 — in-app notifications</div>
+          <div className="phase">{APP_PHASE}</div>
           <div className="who">
             <NotificationBell
               count={unread}
@@ -120,13 +123,8 @@ export default function AdminApp() {
         </header>
 
         <main className="page">
-          {view === 'dashboard' && (
-            <div>
-              <h1>Dashboard</h1>
-              <p className="muted">Placeholder. Real dashboard arrives in Phase 1.0.10.</p>
-            </div>
-          )}
-          {view === 'mywork' && <MyWork />}
+          {view === 'dashboard' && <Dashboard onOpenTicket={openTicket} />}
+          {view === 'mywork' && <MyWork onOpenTicket={openTicket} />}
           {view === 'tickets' && (
             <Tickets
               initialTicketId={ticketToOpen}

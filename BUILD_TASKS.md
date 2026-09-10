@@ -103,9 +103,17 @@ Each step restates scope + success criteria before code is written.
   completed excluded, 403 non-admin) + browser (bell dropdown, click-through
   to TKT-0001).
 
-- [ ] **1.0.10 — Dashboard + My Work**
-  Real data: my tickets, my activities, pending approvals, overdue, upcoming.
-  *Done when:* the home screen reflects your actual records.
+- [x] **1.0.10 — Dashboard + My Work**
+  `GET /dashboard` — visibility-scoped ticket status counts, unassigned,
+  overdue-activity count, 6 recent tickets. `GET /me/work` — my open tickets
+  (with requester/assignee/follower role), my open activities split into
+  overdue / due-in-7-days / later.
+  Web: Dashboard page (KPI cards + recent tickets, click → open ticket),
+  My Work page rebuilt (cards + My tickets + activity groups + New activity).
+  Sidebar footer shows the running build (`v1.0 · build 1.0.10`), driven by
+  `web/src/version.ts` — bump per phase.
+  *Done:* verified — API scoped (admin open 11 / lena open 2) + browser
+  (Dashboard cards + recent-ticket click-through, My Work sections).
 
 - [ ] **1.0.11 — Swap mockup for working UI**
   Replace `mockup.html` screens with the real React app on live data.

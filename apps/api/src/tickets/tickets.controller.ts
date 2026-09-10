@@ -46,6 +46,20 @@ export class TicketsController {
     return this.tickets.myTickets(userId);
   }
 
+  @Get('me/work')
+  meWork(@CurrentUser('id') userId: string) {
+    return this.tickets.meWork(userId);
+  }
+
+  @Get('dashboard')
+  @Roles()
+  dashboard(
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoles() roles: string[],
+  ) {
+    return this.tickets.dashboard(userId, roles);
+  }
+
   // @Roles() with no args just makes the caller's roles available for
   // visibility filtering — it does not restrict access.
   @Get('tickets/stats')

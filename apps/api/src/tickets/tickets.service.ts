@@ -524,6 +524,110 @@ export class TicketsService {
     });
   }
 
+  async dashboard(userId: string, roles: string[]) {
+    const stats = await this.stats(userId, roles);
+    const visibility = await this.visibilityWhere(userId, roles);
+    const now = new Date();
+
+    const [recent, unassigned, overdueActivities, myOpenActivities] =
+      await Promise.all([
+        this.prisma.ticket.findMany({
+          where: visibility,
+          orderBy: { createdAt: 'desc' },
+          take: 6,
+          include: DETAIL_INCLUDE,
+        }),
+        this.prisma.ticket.count({
+          where: {
+            AND: [visibility, { assigneeId: null }, { statusKey: { not: 'closed' } }],
+          },
+        }),
+        this.prisma.activity.count({
+          where: { status: 'OPEN', dueAt: { lt: now } },
+        }),
+        this.prisma.activity.count({
+          where: { assignedToId: userId, status: 'OPEN' },
+        }),
+      ]);
+
+    const n = (k: string) => stats[k] ?? 0;
+    return {
+      counts: {
+        open: n('new') + n('assigned') + n('in_progress') + n('waiting_for_user'),
+        new: n('new'),
+        assigned: n('assigned'),
+        in_progress: n('in_progress'),
+        waiting_for_user: n('waiting_for_user'),
+        resolved: n('resolved'),
+        closed: n('closed'),
+        unassigned,
+        overdueActivities,
+        myOpenActivities,
+      },
+      recent: recent.map((t) => this.decorate(t, userId, roles)),
+    };
+  }
+
+  async meWork(userId: string) {
+    const now = new Date();
+    const soon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const followed = await this.myFollowedTicketIds(userId);
+
+    const [tickets, activities] = await Promise.all([
+      this.prisma.ticket.findMany({
+        where: {
+          AND: [
+            { statusKey: { not: 'closed' } },
+            {
+              OR: [
+                { requesterId: userId },
+                { assigneeId: userId },
+                { id: { in: followed } },
+              ],
+            },
+          ],
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 15,
+        include: DETAIL_INCLUDE,
+      }),
+      this.prisma.activity.findMany({
+        where: { assignedToId: userId, status: 'OPEN' },
+        orderBy: { dueAt: 'asc' },
+        include: { createdBy: { select: { id: true, fullName: true } } },
+      }),
+    ]);
+
+    const roleOf = (t: { requesterId: string; assigneeId: string | null }) =>
+      t.requesterId === userId
+        ? 'requester'
+        : t.assigneeId === userId
+          ? 'assignee'
+          : 'follower';
+
+    return {
+      myTickets: tickets.map((t) => ({
+        id: t.id,
+        number: t.number,
+        subject: t.subject,
+        type: t.type,
+        statusKey: t.statusKey,
+        priority: t.priority,
+        role: roleOf(t),
+      })),
+      activities: {
+        overdue: activities.filter((a) => a.dueAt < now),
+        dueSoon: activities.filter((a) => a.dueAt >= now && a.dueAt <= soon),
+        later: activities.filter((a) => a.dueAt > soon),
+      },
+      counts: {
+        myOpenTickets: tickets.length,
+        myOpenActivities: activities.length,
+        overdueActivities: activities.filter((a) => a.dueAt < now).length,
+      },
+    };
+  }
+
   async stats(userId: string, roles: string[]) {
     const visibility = await this.visibilityWhere(userId, roles);
     const grouped = await this.prisma.ticket.groupBy({
