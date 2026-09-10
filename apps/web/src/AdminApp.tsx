@@ -11,11 +11,15 @@ import MasterData from './pages/admin/MasterData'
 import MyWork from './pages/MyWork'
 import Notifications from './pages/Notifications'
 import Tickets from './pages/tickets/Tickets'
+import Projects from './pages/projects/Projects'
+import Tasks from './pages/Tasks'
 
 type View =
   | 'dashboard'
   | 'mywork'
   | 'tickets'
+  | 'projects'
+  | 'tasks'
   | 'notifications'
   | 'users'
   | 'departments'
@@ -26,6 +30,8 @@ const NAV: { key: View; label: string; group: string; admin?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', group: 'Main' },
   { key: 'mywork', label: 'My Work', group: 'Main' },
   { key: 'tickets', label: 'Tickets & Requests', group: 'Main' },
+  { key: 'projects', label: 'Projects', group: 'Main' },
+  { key: 'tasks', label: 'Tasks', group: 'Main' },
   { key: 'notifications', label: 'Notifications', group: 'Main' },
   { key: 'users', label: 'Users', group: 'Administration', admin: true },
   { key: 'departments', label: 'Departments', group: 'Administration', admin: true },
@@ -38,6 +44,7 @@ export default function AdminApp() {
   const [view, setView] = useState<View>('dashboard')
   const [unread, setUnread] = useState(0)
   const [ticketToOpen, setTicketToOpen] = useState<string | null>(null)
+  const [projectToOpen, setProjectToOpen] = useState<string | null>(null)
 
   const refreshUnread = useCallback(() => {
     api<{ count: number }>('/notifications/unread-count')
@@ -54,6 +61,10 @@ export default function AdminApp() {
   function openTicket(id: string) {
     setTicketToOpen(id)
     setView('tickets')
+  }
+  function openProject(id: string) {
+    setProjectToOpen(id)
+    setView('projects')
   }
 
   const canAdmin = !!user?.roles.some(
@@ -131,6 +142,13 @@ export default function AdminApp() {
               onConsumed={() => setTicketToOpen(null)}
             />
           )}
+          {view === 'projects' && (
+            <Projects
+              initialProjectId={projectToOpen}
+              onConsumed={() => setProjectToOpen(null)}
+            />
+          )}
+          {view === 'tasks' && <Tasks onOpenProject={openProject} />}
           {view === 'notifications' && (
             <Notifications onChanged={refreshUnread} onOpenTicket={openTicket} />
           )}

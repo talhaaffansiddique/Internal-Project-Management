@@ -92,6 +92,10 @@ model User {
   ticketsRequested    Ticket[]         @relation("TicketRequester")
   ticketsAssigned     Ticket[]         @relation("TicketAssignee")
   ticketsClosed       Ticket[]         @relation("TicketClosedBy")
+  projectsOwned       Project[]        @relation("ProjectOwner")
+  projectMemberships  ProjectMember[]
+  tasksAssigned       Task[]           @relation("TaskAssignee")
+  tasksCreated        Task[]           @relation("TaskCreator")
 
   @@index([primaryDepartmentId])
   @@index([supervisorId])
@@ -405,4 +409,70 @@ model Ticket {
   @@index([assigneeId])
   @@index([teamId])
   @@map("tickets")
+}
+
+// ============================================================
+// Projects & Tasks (brief §11)
+// ============================================================
+
+model Project {
+  id          String   @id @default(uuid())
+  number      Int      @unique @default(autoincrement())
+  title       String
+  type        String // master-data key: project_types
+  description String?
+  ownerId     String
+  statusKey   String   @default("planned") // master-data key: project_statuses
+  startDate   DateTime?
+  targetDate  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members ProjectMember[]
+  tasks   Task[]
+
+  @@index([statusKey])
+  @@index([ownerId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Task {
+  id           String   @id @default(uuid())
+  number       Int      @unique @default(autoincrement())
+  projectId    String
+  parentTaskId String?
+  title        String
+  description  String?
+  assigneeId   String?
+  statusKey    String   @default("todo") // master-data key: task_statuses
+  priority     String? // master-data key: priorities
+  dueDate      DateTime?
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent     Task?   @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subtasks   Task[]  @relation("TaskSubtasks")
+  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy  User    @relation("TaskCreator", fields: [createdById], references: [id])
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([statusKey])
+  @@map("tasks")
 }

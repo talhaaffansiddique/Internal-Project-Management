@@ -106,6 +106,42 @@ export interface TicketForm {
   fields: FormField[]
 }
 
+export interface ProjectMemberView {
+  id: string
+  user: { id: string; fullName: string; email: string }
+}
+
+export interface Project {
+  id: string
+  number: number
+  title: string
+  type: string
+  description: string | null
+  statusKey: string
+  startDate: string | null
+  targetDate: string | null
+  owner: { id: string; fullName: string; email: string }
+  members: ProjectMemberView[]
+  taskCounts: Record<string, number>
+  progress: number
+}
+
+export interface Task {
+  id: string
+  number: number
+  projectId: string
+  parentTaskId: string | null
+  title: string
+  description: string | null
+  statusKey: string
+  priority: string | null
+  dueDate: string | null
+  assignee: { id: string; fullName: string } | null
+  createdBy: { id: string; fullName: string }
+  project?: { id: string; number: number; title: string }
+  subtasks?: Task[]
+}
+
 export interface Ticket {
   id: string
   number: number

@@ -132,7 +132,20 @@ Each step restates scope + success criteria before code is written.
 
 ## Later phases (not started)
 
-- [ ] **v1.1 — Projects & Tasks** (+ activities/follow-ups)
+- [x] **v1.1 — Projects & Tasks** (build 1.1.0)
+  Schema: Project (PRJ-0001, type/status as master-data keys, owner + members),
+  ProjectMember, Task (TSK-0001, project-scoped, self-ref subtasks, status/priority).
+  API: `/projects` CRUD + `/status` + members add/remove + `/stats`;
+  `/projects/:id/tasks` + `/tasks` (cross-project) + `/me/tasks` + task
+  `/status`; visibility = owner / member / admin; progress % = done ÷ total tasks;
+  task events audit onto the parent PROJECT; task assignment notifies.
+  Web: Projects list (progress bars) → ProjectDetail (status dropdown, progress
+  bar, team add/remove, tasks grouped To Do/In Progress/In Review/Done with
+  per-task assignee+status selects + subtasks, Discussion/Activity/Files/History
+  tabs). Tasks page (My Tasks / All, grouped, → open project).
+  *Done:* verified — API suite (visibility 403s, subtasks, status flow,
+  progress 20%→29%, audit onto project) + browser (list, detail, task add,
+  progress recompute).
 - [ ] **v1.2 — Meetings & Calendar** (invitations, RSVP, minutes, action items)
 - [ ] **v1.3 — Training** (checklist, materials, employee acknowledgement)
 - [ ] **v1.4 — Procurement** (supervisor routing, director path, quotations)

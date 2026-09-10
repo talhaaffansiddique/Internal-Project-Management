@@ -162,13 +162,17 @@ const TICKETS: DemoTicket[] = [
 ];
 
 async function reset() {
-  await prisma.notification.deleteMany({ where: { entityType: EntityType.TICKET } });
-  await prisma.auditLog.deleteMany({ where: { entityType: EntityType.TICKET } });
-  await prisma.activity.deleteMany({ where: { entityType: EntityType.TICKET } });
-  await prisma.follower.deleteMany({ where: { entityType: EntityType.TICKET } });
-  await prisma.attachment.deleteMany({ where: { entityType: EntityType.TICKET } });
-  await prisma.commentMention.deleteMany({ where: { comment: { entityType: EntityType.TICKET } } });
-  await prisma.comment.deleteMany({ where: { entityType: EntityType.TICKET } });
+  for (const et of [EntityType.TICKET, EntityType.PROJECT, EntityType.TASK]) {
+    await prisma.notification.deleteMany({ where: { entityType: et } });
+    await prisma.auditLog.deleteMany({ where: { entityType: et } });
+    await prisma.activity.deleteMany({ where: { entityType: et } });
+    await prisma.follower.deleteMany({ where: { entityType: et } });
+    await prisma.attachment.deleteMany({ where: { entityType: et } });
+    await prisma.commentMention.deleteMany({ where: { comment: { entityType: et } } });
+    await prisma.comment.deleteMany({ where: { entityType: et } });
+  }
+  await prisma.task.deleteMany({});
+  await prisma.project.deleteMany({});
   await prisma.ticket.deleteMany({});
 
   const demoUsers = await prisma.user.findMany({
@@ -314,7 +318,121 @@ async function main() {
     });
   }
 
-  console.log(`Demo data ready: ${USERS.length} users, ${TEAMS.length} teams, ${created} tickets.`);
+  // ---------- Projects & tasks ----------
+  const PROJECTS: Array<{
+    title: string;
+    type: string;
+    status: string;
+    owner: string;
+    members: string[];
+    start: string;
+    target: string;
+    tasks: Array<[string, string, string?, string?]>; // [title, status, assignee?, priority?]
+  }> = [
+    {
+      title: 'B2B Sales Development',
+      type: 'sales_initiative',
+      status: 'in_progress',
+      owner: 'lena.m',
+      members: ['lena.m', 'yusuf.a', 'sara.k'],
+      start: '2026-08-01',
+      target: '2026-11-30',
+      tasks: [
+        ['Build target-customer list', 'done', 'lena.m'],
+        ['Prepare sales presentation', 'in_review', 'lena.m', 'high'],
+        ['Schedule customer meetings', 'in_progress', 'yusuf.a'],
+        ['Send quotations', 'todo', 'lena.m', 'normal'],
+        ['Follow up & finalize agreement', 'todo'],
+      ],
+    },
+    {
+      title: 'ERP Month-End Stabilisation',
+      type: 'operations',
+      status: 'in_progress',
+      owner: 'admin',
+      members: ['admin', 'sara.k', 'omar.d'],
+      start: '2026-09-01',
+      target: '2026-10-15',
+      tasks: [
+        ['Document current month-end steps', 'done', 'sara.k'],
+        ['Fix GL period rollover config', 'in_progress', 'admin', 'high'],
+        ['Add validation for closed periods', 'todo', 'admin'],
+        ['Train finance team on new checklist', 'todo', 'sara.k'],
+      ],
+    },
+    {
+      title: 'Warehouse Barcode Rollout',
+      type: 'it_rollout',
+      status: 'at_risk',
+      owner: 'omar.d',
+      members: ['omar.d', 'admin', 'hassan.r'],
+      start: '2026-08-15',
+      target: '2026-12-20',
+      tasks: [
+        ['Choose scanner model', 'done', 'omar.d'],
+        ['Pilot on one aisle', 'in_progress', 'hassan.r', 'normal'],
+        ['Print & apply shelf labels', 'todo', 'omar.d'],
+        ['Roll out to all aisles', 'todo'],
+      ],
+    },
+    {
+      title: 'HR Onboarding Revamp',
+      type: 'hr',
+      status: 'planned',
+      owner: 'nadia.f',
+      members: ['nadia.f'],
+      start: '2026-10-01',
+      target: '2026-12-01',
+      tasks: [
+        ['Draft new onboarding checklist', 'todo', 'nadia.f'],
+        ['Collect feedback from recent hires', 'todo', 'nadia.f'],
+      ],
+    },
+  ];
+
+  let projCount = 0;
+  let taskCount = 0;
+  for (const proj of PROJECTS) {
+    const memberIds = [...new Set([...proj.members, proj.owner])];
+    const p = await prisma.project.create({
+      data: {
+        title: proj.title,
+        type: proj.type,
+        statusKey: proj.status,
+        ownerId: userId[proj.owner],
+        startDate: new Date(proj.start),
+        targetDate: new Date(proj.target),
+        members: { create: memberIds.map((m) => ({ userId: userId[m] })) },
+      },
+    });
+    projCount += 1;
+    await prisma.auditLog.create({
+      data: {
+        entityType: EntityType.PROJECT,
+        entityId: p.id,
+        action: 'CREATED',
+        summary: `created project PRJ-${String(p.number).padStart(4, '0')}`,
+        actorId: userId[proj.owner],
+      },
+    });
+    for (const [title, status, assignee, priority] of proj.tasks) {
+      await prisma.task.create({
+        data: {
+          projectId: p.id,
+          title,
+          statusKey: status,
+          assigneeId: assignee ? userId[assignee] : null,
+          priority: priority ?? null,
+          createdById: userId[proj.owner],
+        },
+      });
+      taskCount += 1;
+    }
+  }
+
+  console.log(
+    `Demo data ready: ${USERS.length} users, ${TEAMS.length} teams, ${created} tickets, ${projCount} projects, ${taskCount} tasks.`,
+  );
   console.log(`All demo logins use password: ${PASSWORD}`);
   console.log('e.g.  admin@demo.opshub  /  sara.k@demo.opshub  /  lena.m@demo.opshub');
 }
