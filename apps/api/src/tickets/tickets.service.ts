@@ -151,7 +151,6 @@ export class TicketsService {
 
     if (query.type) and.push({ type: query.type });
     if (query.statusKey) and.push({ statusKey: query.statusKey });
-    if (query.priority) and.push({ priority: query.priority });
     if (query.assigneeId) and.push({ assigneeId: query.assigneeId });
     if (query.teamId) and.push({ teamId: query.teamId });
     if (query.q) {
@@ -237,9 +236,6 @@ export class TicketsService {
     if (!getForm(dto.type)) {
       await this.validateMasterKey('ticket_types', dto.type, 'ticket type');
     }
-    if (dto.priority) {
-      await this.validateMasterKey('priorities', dto.priority, 'priority');
-    }
     const visibility = dto.visibility ?? TicketVisibility.PRIVATE;
     if (visibility === TicketVisibility.TEAM && !dto.teamId) {
       throw new BadRequestException('A team ticket needs a team');
@@ -253,7 +249,6 @@ export class TicketsService {
         fields: (dto.fields ?? undefined) as Prisma.InputJsonValue | undefined,
         visibility,
         teamId: visibility === TicketVisibility.TEAM ? dto.teamId : null,
-        priority: dto.priority ?? null,
         categoryId: dto.categoryId ?? null,
         requesterId: userId,
         statusKey: 'new',
@@ -287,9 +282,6 @@ export class TicketsService {
     if (!mayEdit) {
       throw new ForbiddenException('You cannot edit this ticket');
     }
-    if (dto.priority) {
-      await this.validateMasterKey('priorities', dto.priority, 'priority');
-    }
 
     const nextVisibility = dto.visibility ?? existing.visibility;
     const nextTeamId =
@@ -307,7 +299,6 @@ export class TicketsService {
         visibility: dto.visibility,
         teamId:
           nextVisibility === TicketVisibility.TEAM ? nextTeamId : null,
-        priority: dto.priority,
         categoryId: dto.categoryId,
       },
       include: DETAIL_INCLUDE,
@@ -612,7 +603,7 @@ export class TicketsService {
         subject: t.subject,
         type: t.type,
         statusKey: t.statusKey,
-        priority: t.priority,
+        createdAt: t.createdAt,
         role: roleOf(t),
       })),
       activities: {

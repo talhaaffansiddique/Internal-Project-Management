@@ -134,7 +134,7 @@ export default function Tickets({
               <th>Type</th>
               <th>Requester</th>
               <th>Assignee</th>
-              <th>Priority</th>
+              <th>Created</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -153,7 +153,9 @@ export default function Tickets({
                 <td>{forms.find((f) => f.type === t.type)?.label ?? t.type}</td>
                 <td>{t.requester.fullName}</td>
                 <td>{t.assignee?.fullName ?? <span className="muted">—</span>}</td>
-                <td>{t.priority ?? <span className="muted">—</span>}</td>
+                <td className="muted small">
+                  {new Date(t.createdAt).toLocaleDateString()}
+                </td>
                 <td>
                   <span className="badge warn">
                     {STATUS_LABEL[t.statusKey] ?? t.statusKey}
@@ -194,17 +196,12 @@ function NewTicketModal({
   const [fields, setFields] = useState<Record<string, string>>({})
   const [visibility, setVisibility] = useState<'PRIVATE' | 'TEAM'>('PRIVATE')
   const [teamId, setTeamId] = useState('')
-  const [priority, setPriority] = useState('')
   const [teams, setTeams] = useState<Team[]>([])
-  const [priorities, setPriorities] = useState<{ key: string; label: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     void api<Team[]>('/teams').then(setTeams)
-    void api<{ values: { key: string; label: string }[] }>('/master-data/priorities')
-      .then((r) => setPriorities(r.values))
-      .catch(() => {})
   }, [])
 
   const form = forms.find((f) => f.type === type)
@@ -230,7 +227,6 @@ function NewTicketModal({
           fields,
           visibility,
           teamId: visibility === 'TEAM' ? teamId : undefined,
-          priority: priority || undefined,
         }),
       })
       onCreated(created.id)
@@ -329,15 +325,6 @@ function NewTicketModal({
               </select>
             </Field>
           )}
-
-          <Field label="Priority (optional)">
-            <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-              <option value="">— leave blank —</option>
-              {priorities.map((p) => (
-                <option key={p.key} value={p.key}>{p.label}</option>
-              ))}
-            </select>
-          </Field>
         </>
       )}
 

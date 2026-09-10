@@ -120,6 +120,7 @@ export interface Project {
   statusKey: string
   startDate: string | null
   targetDate: string | null
+  createdAt: string
   owner: { id: string; fullName: string; email: string }
   members: ProjectMemberView[]
   taskCounts: Record<string, number>
@@ -134,8 +135,8 @@ export interface Task {
   title: string
   description: string | null
   statusKey: string
-  priority: string | null
   dueDate: string | null
+  createdAt: string
   assignee: { id: string; fullName: string } | null
   createdBy: { id: string; fullName: string }
   project?: { id: string; number: number; title: string }
@@ -179,7 +180,6 @@ export interface Ticket {
   description: string | null
   fields: Record<string, string> | null
   visibility: 'PRIVATE' | 'TEAM'
-  priority: string | null
   statusKey: string
   categoryId: string | null
   createdAt: string

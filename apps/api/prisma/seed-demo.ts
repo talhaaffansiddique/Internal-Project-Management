@@ -54,7 +54,6 @@ interface DemoTicket {
   fields: Record<string, string>;
   visibility: 'PRIVATE' | 'TEAM';
   team?: string;
-  priority?: string;
   statusKey: string;
   requester: string;
   assignee?: string;
@@ -65,21 +64,21 @@ const TICKETS: DemoTicket[] = [
     subject: 'GL posting fails for September invoices',
     type: 'erp_issue',
     fields: { erpModule: 'General Ledger', whatTrying: 'Post September customer invoices', whatWentWrong: 'Batch stops at invoice 41', errorMessage: 'Account 4000-01 is not open for the selected period' },
-    visibility: 'TEAM', team: 'ERP Support', priority: 'high', statusKey: 'in_progress',
+    visibility: 'TEAM', team: 'ERP Support', statusKey: 'in_progress',
     requester: 'sara.k', assignee: 'admin',
   },
   {
     subject: 'Cannot log in to ERP after password reset',
     type: 'access_request',
     fields: { system: 'ERP', accessLevel: 'existing account', reason: 'Locked out since this morning' },
-    visibility: 'PRIVATE', priority: 'urgent', statusKey: 'waiting_for_user',
+    visibility: 'PRIVATE', statusKey: 'waiting_for_user',
     requester: 'lena.m', assignee: 'admin',
   },
   {
     subject: 'New laptop for onboarding — Warehouse',
     type: 'procurement_request',
     fields: { kind: 'Product', item: 'Standard staff laptop', quantity: '1', reason: 'New warehouse hire starts next week' },
-    visibility: 'TEAM', team: 'ERP Support', priority: 'normal', statusKey: 'assigned',
+    visibility: 'TEAM', team: 'ERP Support', statusKey: 'assigned',
     requester: 'omar.d', assignee: 'priya.n',
   },
   {
@@ -93,21 +92,21 @@ const TICKETS: DemoTicket[] = [
     subject: 'Printer on 2nd floor not responding',
     type: 'it_issue',
     fields: { device: 'HP LaserJet (2nd floor)', problem: 'Jobs queue but nothing prints', whenStarted: 'Yesterday afternoon' },
-    visibility: 'TEAM', team: 'IT Desk', priority: 'normal', statusKey: 'resolved',
+    visibility: 'TEAM', team: 'IT Desk', statusKey: 'resolved',
     requester: 'hassan.r', assignee: 'admin',
   },
   {
     subject: 'Stock report totals do not match warehouse count',
     type: 'erp_issue',
     fields: { erpModule: 'Inventory', whatTrying: 'Reconcile month-end stock', whatWentWrong: 'System shows 1,204 units, floor count is 1,180', errorMessage: '' },
-    visibility: 'TEAM', team: 'ERP Support', priority: 'high', statusKey: 'in_progress',
+    visibility: 'TEAM', team: 'ERP Support', statusKey: 'in_progress',
     requester: 'omar.d', assignee: 'admin',
   },
   {
     subject: 'VPN access for remote finance user',
     type: 'access_request',
     fields: { system: 'Corporate VPN', accessLevel: 'standard remote', reason: 'Working from home two days a week' },
-    visibility: 'PRIVATE', priority: 'normal', statusKey: 'assigned',
+    visibility: 'PRIVATE', statusKey: 'assigned',
     requester: 'sara.k', assignee: 'admin',
   },
   {
@@ -121,21 +120,21 @@ const TICKETS: DemoTicket[] = [
     subject: 'Quarterly forklift maintenance contract',
     type: 'procurement_request',
     fields: { kind: 'Service', item: 'Forklift preventive maintenance, 4 visits/year', quantity: '', reason: 'Current contract expires this month' },
-    visibility: 'PRIVATE', priority: 'normal', statusKey: 'assigned',
+    visibility: 'PRIVATE', statusKey: 'assigned',
     requester: 'omar.d', assignee: 'priya.n',
   },
   {
     subject: 'CRM export missing last week of data',
     type: 'erp_issue',
     fields: { erpModule: 'CRM', whatTrying: 'Export pipeline report', whatWentWrong: 'Rows after last Monday are missing', errorMessage: '' },
-    visibility: 'TEAM', team: 'Sales Floor', priority: 'normal', statusKey: 'new',
+    visibility: 'TEAM', team: 'Sales Floor', statusKey: 'new',
     requester: 'lena.m',
   },
   {
     subject: 'Laptop keyboard keys sticking',
     type: 'it_issue',
     fields: { device: 'Dell Latitude (Sara K.)', problem: 'E and R keys need hard presses', whenStarted: 'Last week' },
-    visibility: 'PRIVATE', priority: 'low', statusKey: 'closed',
+    visibility: 'PRIVATE', statusKey: 'closed',
     requester: 'sara.k', assignee: 'admin',
   },
   {
@@ -149,14 +148,14 @@ const TICKETS: DemoTicket[] = [
     subject: 'Access to management dashboards',
     type: 'access_request',
     fields: { system: 'BI Dashboards', accessLevel: 'view all departments', reason: 'Board reporting' },
-    visibility: 'PRIVATE', priority: 'normal', statusKey: 'resolved',
+    visibility: 'PRIVATE', statusKey: 'resolved',
     requester: 'yusuf.a', assignee: 'admin',
   },
   {
     subject: 'Meeting room display keeps disconnecting',
     type: 'it_issue',
     fields: { device: 'Conference room A screen', problem: 'HDMI drops every few minutes', whenStarted: 'Since the office move' },
-    visibility: 'TEAM', team: 'IT Desk', priority: 'normal', statusKey: 'assigned',
+    visibility: 'TEAM', team: 'IT Desk', statusKey: 'assigned',
     requester: 'nadia.f', assignee: 'hassan.r',
   },
 ];
@@ -244,7 +243,6 @@ async function main() {
         fields: t.fields,
         visibility: t.visibility,
         teamId: t.team ? teamId[t.team] : null,
-        priority: t.priority ?? null,
         statusKey: t.statusKey,
         requesterId: userId[t.requester],
         assigneeId: t.assignee ? userId[t.assignee] : null,
@@ -293,7 +291,7 @@ async function main() {
         entityType: EntityType.TICKET,
         entityId: first.id,
         authorId: userId['sara.k'],
-        body: 'Finance close is blocked until this is fixed — flagging as high priority.',
+        body: 'Finance close is blocked until this is fixed — please treat as urgent.',
       },
     });
     await prisma.comment.create({
@@ -334,7 +332,7 @@ async function main() {
     members: string[];
     start: string;
     target: string;
-    tasks: Array<[string, string, string?, string?]>; // [title, status, assignee?, priority?]
+    tasks: Array<[string, string, string?]>; // [title, status, assignee?]
   }> = [
     {
       title: 'B2B Sales Development',
@@ -346,9 +344,9 @@ async function main() {
       target: '2026-11-30',
       tasks: [
         ['Build target-customer list', 'done', 'lena.m'],
-        ['Prepare sales presentation', 'in_review', 'lena.m', 'high'],
+        ['Prepare sales presentation', 'in_review', 'lena.m'],
         ['Schedule customer meetings', 'in_progress', 'yusuf.a'],
-        ['Send quotations', 'todo', 'lena.m', 'normal'],
+        ['Send quotations', 'todo', 'lena.m'],
         ['Follow up & finalize agreement', 'todo'],
       ],
     },
@@ -362,7 +360,7 @@ async function main() {
       target: '2026-10-15',
       tasks: [
         ['Document current month-end steps', 'done', 'sara.k'],
-        ['Fix GL period rollover config', 'in_progress', 'admin', 'high'],
+        ['Fix GL period rollover config', 'in_progress', 'admin'],
         ['Add validation for closed periods', 'todo', 'admin'],
         ['Train finance team on new checklist', 'todo', 'sara.k'],
       ],
@@ -377,7 +375,7 @@ async function main() {
       target: '2026-12-20',
       tasks: [
         ['Choose scanner model', 'done', 'omar.d'],
-        ['Pilot on one aisle', 'in_progress', 'hassan.r', 'normal'],
+        ['Pilot on one aisle', 'in_progress', 'hassan.r'],
         ['Print & apply shelf labels', 'todo', 'omar.d'],
         ['Roll out to all aisles', 'todo'],
       ],
@@ -422,14 +420,13 @@ async function main() {
         actorId: userId[proj.owner],
       },
     });
-    for (const [title, status, assignee, priority] of proj.tasks) {
+    for (const [title, status, assignee] of proj.tasks) {
       await prisma.task.create({
         data: {
           projectId: p.id,
           title,
           statusKey: status,
           assigneeId: assignee ? userId[assignee] : null,
-          priority: priority ?? null,
           createdById: userId[proj.owner],
         },
       });

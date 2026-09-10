@@ -397,7 +397,6 @@ model Ticket {
   fields       Json? // conditional-form answers, shape depends on `type`
   visibility   TicketVisibility @default(PRIVATE)
   teamId       String?
-  priority     String? // master-data key (optional, brief §8.5)
   statusKey    String           @default("new") // master-data key
   categoryId   String? // master_data_value id (ticket_categories)
   requesterId  String
@@ -469,7 +468,6 @@ model Task {
   description  String?
   assigneeId   String?
   statusKey    String   @default("todo") // master-data key: task_statuses
-  priority     String? // master-data key: priorities
   dueDate      DateTime?
   createdById  String
   createdAt    DateTime @default(now())

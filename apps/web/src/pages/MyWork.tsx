@@ -29,7 +29,7 @@ interface MyWorkData {
     number: number
     subject: string
     statusKey: string
-    priority: string | null
+    createdAt: string
     role: 'requester' | 'assignee' | 'follower'
   }[]
   activities: { overdue: Activity[]; dueSoon: Activity[]; later: Activity[] }
@@ -111,6 +111,9 @@ export default function MyWork({
                     <td>
                       {t.subject}
                       <span className="role-chip">{t.role}</span>
+                    </td>
+                    <td className="muted small" style={{ width: 100 }}>
+                      {new Date(t.createdAt).toLocaleDateString()}
                     </td>
                     <td style={{ width: 150 }}>
                       <span className={`badge status-${t.statusKey}`}>

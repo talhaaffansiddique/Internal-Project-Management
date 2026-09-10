@@ -53,7 +53,6 @@ export class CreateTaskDto {
   @IsString() @MinLength(2) title!: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsUUID() assigneeId?: string;
-  @IsOptional() @IsString() priority?: string;
   @IsOptional() @IsDateString() dueDate?: string;
   @IsOptional() @IsUUID() parentTaskId?: string;
 }
@@ -62,7 +61,6 @@ export class UpdateTaskDto {
   @IsOptional() @IsString() @MinLength(2) title?: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsUUID() assigneeId?: string;
-  @IsOptional() @IsString() priority?: string;
   @IsOptional() @IsDateString() dueDate?: string;
 }
 

@@ -309,7 +309,9 @@ function TaskRow({
     <div className="task-row">
       <div className="task-main">
         <span>{task.title}</span>
-        {task.priority && <span className="badge muted">{task.priority}</span>}
+        <span className="muted small">
+          {new Date(task.createdAt).toLocaleDateString()}
+        </span>
       </div>
       <select
         value={task.assignee?.id ?? ''}

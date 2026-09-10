@@ -101,6 +101,7 @@ export default function Projects({
               <th>Project</th>
               <th>Owner</th>
               <th>Progress</th>
+              <th>Created</th>
               <th>Target</th>
               <th>Status</th>
             </tr>
@@ -119,6 +120,9 @@ export default function Projects({
                     />
                   </div>
                   <span className="muted small">{p.progress}%</span>
+                </td>
+                <td className="muted small">
+                  {new Date(p.createdAt).toLocaleDateString()}
                 </td>
                 <td className="muted small">
                   {p.targetDate

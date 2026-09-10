@@ -46,15 +46,6 @@ const MASTER_DATA: Record<string, { name: string; hierarchy?: boolean; values: V
   },
   ticket_categories: { name: 'Ticket Categories', hierarchy: true, values: [] },
   ticket_tags: { name: 'Ticket Tags', values: [] },
-  priorities: {
-    name: 'Priorities',
-    values: [
-      ['low', 'Low'],
-      ['normal', 'Normal'],
-      ['high', 'High'],
-      ['urgent', 'Urgent'],
-    ],
-  },
   ticket_statuses: {
     name: 'Ticket Statuses',
     values: [
@@ -184,6 +175,12 @@ async function main() {
   for (const [name, address] of BRANCHES) {
     await prisma.branch.upsert({ where: { name }, update: {}, create: { name, address } });
   }
+
+  // --- Retired master data (priority was removed from the product) ---
+  await prisma.masterDataValue.deleteMany({
+    where: { type: { key: 'priorities' } },
+  });
+  await prisma.masterDataType.deleteMany({ where: { key: 'priorities' } });
 
   // --- Master data types + values ---
   for (const [typeKey, def] of Object.entries(MASTER_DATA)) {

@@ -29,7 +29,7 @@ interface DashData {
     number: number
     subject: string
     statusKey: string
-    priority: string | null
+    createdAt: string
     requester: { fullName: string }
     assignee: { fullName: string } | null
   }[]
@@ -95,6 +95,9 @@ export default function Dashboard({
                     <td>{t.subject}</td>
                     <td>{t.requester.fullName}</td>
                     <td>{t.assignee?.fullName ?? <span className="muted">—</span>}</td>
+                    <td className="muted small" style={{ width: 100 }}>
+                      {new Date(t.createdAt).toLocaleDateString()}
+                    </td>
                     <td style={{ width: 150 }}>
                       <span className={`badge status-${t.statusKey}`}>
                         {STATUS_LABEL[t.statusKey] ?? t.statusKey}

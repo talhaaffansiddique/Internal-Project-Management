@@ -126,6 +126,24 @@ Each step restates scope + success criteria before code is written.
 
 ---
 
+## Change requests
+
+- [x] **CR-1: remove Priority entirely; show creation dates in every list** (build 1.2.1)
+  - Dropped `Ticket.priority` and `Task.priority` columns (migration `remove_priority`);
+    removed the `priorities` master-data type + values (core seed now deletes them).
+  - Removed priority from every DTO, service, form, filter, table, and detail view.
+  - Added a **Created** date column to: Tickets list, Projects list, Tasks list,
+    the Project-detail task rows, Dashboard "recent tickets", My Work "my tickets";
+    ticket detail shows "Created" instead of "Priority".
+  - Brief updated (`Internal_Company_Operations_Project_Brief_v1_UPDATED.docx`):
+    removed §8.5 Priority, the §8.2 "optional priority" line, "Priorities" from
+    §5.1 Ticket Masters, "Priority" from §11 task fields; added a "Visible
+    creation dates" principle to §2.
+  - Verified: master-data types 17→16, ticket/task payloads have no `priority`
+    and carry `createdAt`, create-without-priority → 201.
+
+---
+
 ## ✅ v1.0 — Core Platform: COMPLETE (build 1.0.11)
 
 ---

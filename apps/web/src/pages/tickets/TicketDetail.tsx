@@ -183,8 +183,8 @@ export default function TicketDetail({
         <div>
           <div className="card">
             <div className="kv">
-              <span>Priority</span>
-              <b>{ticket.priority ?? <span className="muted">— not set</span>}</b>
+              <span>Created</span>
+              <b>{new Date(ticket.createdAt).toLocaleString()}</b>
               <span>Visibility</span>
               <b>
                 {ticket.visibility === 'TEAM'
@@ -357,16 +357,8 @@ function EditTicketModal({
 }) {
   const [subject, setSubject] = useState(ticket.subject)
   const [description, setDescription] = useState(ticket.description ?? '')
-  const [priority, setPriority] = useState(ticket.priority ?? '')
-  const [priorities, setPriorities] = useState<{ key: string; label: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    void api<{ values: { key: string; label: string }[] }>('/master-data/priorities')
-      .then((r) => setPriorities(r.values))
-      .catch(() => {})
-  }, [])
 
   async function save() {
     setBusy(true)
@@ -377,7 +369,6 @@ function EditTicketModal({
         body: JSON.stringify({
           subject,
           description: description || undefined,
-          priority: priority || undefined,
         }),
       })
       onSaved()
@@ -406,14 +397,6 @@ function EditTicketModal({
       </Field>
       <Field label="Description">
         <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-      </Field>
-      <Field label="Priority" hint="Optional">
-        <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-          <option value="">— not set —</option>
-          {priorities.map((p) => (
-            <option key={p.key} value={p.key}>{p.label}</option>
-          ))}
-        </select>
       </Field>
       <ErrorText>{error}</ErrorText>
     </Modal>

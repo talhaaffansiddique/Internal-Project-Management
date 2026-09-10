@@ -97,6 +97,9 @@ export default function Tasks({
                         <td className="muted small">
                           {t.assignee?.fullName ?? 'unassigned'}
                         </td>
+                        <td className="muted small" style={{ width: 100 }}>
+                          {new Date(t.createdAt).toLocaleDateString()}
+                        </td>
                         <td style={{ width: 150 }} onClick={(e) => e.stopPropagation()}>
                           <select
                             value={t.statusKey}

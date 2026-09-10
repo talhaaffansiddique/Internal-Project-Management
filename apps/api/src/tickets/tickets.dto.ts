@@ -14,7 +14,6 @@ export class ListTicketsQuery {
   view?: 'all' | 'mine' | 'team' | 'unassigned' | 'following';
   @IsOptional() @IsString() type?: string;
   @IsOptional() @IsString() statusKey?: string;
-  @IsOptional() @IsString() priority?: string;
   @IsOptional() @IsUUID() assigneeId?: string;
   @IsOptional() @IsUUID() teamId?: string;
   @IsOptional() @IsString() q?: string;
@@ -27,7 +26,6 @@ export class CreateTicketDto {
   @IsOptional() @IsObject() fields?: Record<string, unknown>;
   @IsOptional() @IsEnum(TicketVisibility) visibility?: TicketVisibility;
   @IsOptional() @IsUUID() teamId?: string;
-  @IsOptional() @IsString() priority?: string;
   @IsOptional() @IsUUID() categoryId?: string;
 }
 
@@ -37,7 +35,6 @@ export class UpdateTicketDto {
   @IsOptional() @IsObject() fields?: Record<string, unknown>;
   @IsOptional() @IsEnum(TicketVisibility) visibility?: TicketVisibility;
   @IsOptional() @IsUUID() teamId?: string;
-  @IsOptional() @IsString() priority?: string;
   @IsOptional() @IsUUID() categoryId?: string;
 }
 

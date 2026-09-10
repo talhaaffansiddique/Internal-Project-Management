@@ -34,15 +34,6 @@ export class TasksService {
     private readonly projects: ProjectsService,
   ) {}
 
-  private async validatePriority(key?: string) {
-    if (!key) return;
-    const row = await this.prisma.masterDataValue.findFirst({
-      where: { key, type: { key: 'priorities' }, active: true },
-      select: { id: true },
-    });
-    if (!row) throw new BadRequestException(`Unknown priority: ${key}`);
-  }
-
   private async validateStatus(key: string) {
     const row = await this.prisma.masterDataValue.findFirst({
       where: { key, type: { key: 'task_statuses' }, active: true },
@@ -109,7 +100,6 @@ export class TasksService {
     if (!(await this.projects.canView(projectId, userId, roles))) {
       throw new ForbiddenException('You are not a member of this project');
     }
-    await this.validatePriority(dto.priority);
     if (dto.parentTaskId) {
       const parent = await this.prisma.task.findFirst({
         where: { id: dto.parentTaskId, projectId },
@@ -129,7 +119,6 @@ export class TasksService {
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
         assigneeId: dto.assigneeId ?? null,
-        priority: dto.priority ?? null,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
         createdById: userId,
       },
@@ -157,7 +146,6 @@ export class TasksService {
 
   async update(id: string, userId: string, roles: string[], dto: UpdateTaskDto) {
     const existing = await this.get(id, userId, roles);
-    await this.validatePriority(dto.priority);
 
     const task = await this.prisma.task.update({
       where: { id },
@@ -165,7 +153,6 @@ export class TasksService {
         title: dto.title?.trim(),
         description: dto.description?.trim(),
         assigneeId: dto.assigneeId,
-        priority: dto.priority,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
       },
       include: INCLUDE,
