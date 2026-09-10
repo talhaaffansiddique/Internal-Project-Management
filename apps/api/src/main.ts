@@ -16,7 +16,7 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, transform: true }),
   );
 
-  const port = Number(process.env.PORT ?? 3000);
+  const port = Number(process.env.PORT ?? 4000);
   await app.listen(port);
   Logger.log(`OpsHub API running on http://localhost:${port}/api/v1`, 'Bootstrap');
 }

@@ -35,7 +35,7 @@ Historical dummy-data mockup (superseded by the live app): `mockup.html`
 
 ```
 apps/
-  api/   NestJS API  (runs on http://localhost:3000, prefix /api/v1)
+  api/   NestJS API  (runs on http://localhost:4000, prefix /api/v1)
   web/   React app   (runs on http://localhost:5173, proxies /api → api)
 ```
 
@@ -114,7 +114,7 @@ From the project root:
 npm run dev
 ```
 
-- API:  http://localhost:3000/api/v1/health
+- API:  http://localhost:4000/api/v1/health
 - App:  http://localhost:5173
 
 **Step 1.0.1 is done when** the web page shows both *API status* and *Database* in green.
