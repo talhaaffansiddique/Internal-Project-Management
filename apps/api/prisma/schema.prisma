@@ -44,6 +44,13 @@ enum TicketVisibility {
   TEAM
 }
 
+enum MeetingResponse {
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
 enum NotificationType {
   MENTION
   ASSIGNMENT
@@ -96,6 +103,8 @@ model User {
   projectMemberships  ProjectMember[]
   tasksAssigned       Task[]           @relation("TaskAssignee")
   tasksCreated        Task[]           @relation("TaskCreator")
+  meetingsOrganized   Meeting[]        @relation("MeetingOrganizer")
+  meetingParticipations MeetingParticipant[]
 
   @@index([primaryDepartmentId])
   @@index([supervisorId])
@@ -428,9 +437,10 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id])
-  members ProjectMember[]
-  tasks   Task[]
+  owner    User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members  ProjectMember[]
+  tasks    Task[]
+  meetings Meeting[]
 
   @@index([statusKey])
   @@index([ownerId])
@@ -475,4 +485,49 @@ model Task {
   @@index([assigneeId])
   @@index([statusKey])
   @@map("tasks")
+}
+
+// ============================================================
+// Meetings & Calendar (brief §12)
+// ============================================================
+
+model Meeting {
+  id             String   @id @default(uuid())
+  number         Int      @unique @default(autoincrement())
+  title          String
+  agenda         String?
+  startsAt       DateTime
+  endsAt         DateTime
+  organizerId    String
+  location       String?
+  onlineLink     String?
+  projectId      String?
+  minutes        String?
+  lastRemindedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organizer    User                 @relation("MeetingOrganizer", fields: [organizerId], references: [id])
+  project      Project?             @relation(fields: [projectId], references: [id])
+  participants MeetingParticipant[]
+
+  @@index([startsAt])
+  @@index([organizerId])
+  @@map("meetings")
+}
+
+model MeetingParticipant {
+  id          String          @id @default(uuid())
+  meetingId   String
+  userId      String
+  response    MeetingResponse @default(PENDING)
+  respondedAt DateTime?
+  attended    Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])
+  @@map("meeting_participants")
 }

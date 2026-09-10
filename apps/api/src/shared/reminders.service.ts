@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ActivityStatus, NotificationType } from '@prisma/client';
+import { ActivityStatus, EntityType, NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { NotificationsService } from './notifications.service.js';
 
@@ -19,16 +19,21 @@ export class RemindersService {
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleCron() {
-    const sent = await this.runNow();
-    if (sent > 0) this.logger.log(`Sent ${sent} activity reminder(s)`);
+    const { activities, meetings } = await this.runNow();
+    if (activities + meetings > 0) {
+      this.logger.log(
+        `Reminders sent — activities: ${activities}, meetings: ${meetings}`,
+      );
+    }
   }
 
   /** Also callable on demand via POST /admin/run-reminders. */
-  async runNow(): Promise<number> {
+  async runNow(): Promise<{ activities: number; meetings: number }> {
     const now = new Date();
     const dueBefore = new Date(now.getTime() + DUE_SOON_MS);
     const cooldownBefore = new Date(now.getTime() - REMIND_COOLDOWN_MS);
 
+    // ---- Activity due-date reminders ----
     const activities = await this.prisma.activity.findMany({
       where: {
         status: ActivityStatus.OPEN,
@@ -39,7 +44,6 @@ export class RemindersService {
         ],
       },
     });
-
     for (const a of activities) {
       const overdue = a.dueAt.getTime() < now.getTime();
       await this.notifications.notify({
@@ -55,6 +59,36 @@ export class RemindersService {
         data: { lastRemindedAt: now },
       });
     }
-    return activities.length;
+
+    // ---- Meeting reminders (starting within 24h, not yet started) ----
+    const meetings = await this.prisma.meeting.findMany({
+      where: {
+        startsAt: { gte: now, lte: dueBefore },
+        OR: [
+          { lastRemindedAt: null },
+          { lastRemindedAt: { lt: cooldownBefore } },
+        ],
+      },
+      include: { participants: { select: { userId: true } } },
+    });
+    for (const m of meetings) {
+      const recipients = [
+        m.organizerId,
+        ...m.participants.map((p) => p.userId),
+      ];
+      await this.notifications.notifyMany(recipients, {
+        type: NotificationType.MEETING_REMINDER,
+        title: `Upcoming: ${m.title}`,
+        body: m.startsAt.toLocaleString(),
+        entityType: EntityType.MEETING,
+        entityId: m.id,
+      });
+      await this.prisma.meeting.update({
+        where: { id: m.id },
+        data: { lastRemindedAt: now },
+      });
+    }
+
+    return { activities: activities.length, meetings: meetings.length };
   }
 }

@@ -10,6 +10,7 @@ import { MasterDataModule } from './master-data/master-data.module.js';
 import { SharedModule } from './shared/shared.module.js';
 import { TicketsModule } from './tickets/tickets.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
+import { MeetingsModule } from './meetings/meetings.module.js';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ProjectsModule } from './projects/projects.module.js';
     SharedModule,
     TicketsModule,
     ProjectsModule,
+    MeetingsModule,
     HealthModule,
   ],
 })

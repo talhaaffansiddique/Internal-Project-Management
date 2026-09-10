@@ -142,6 +142,35 @@ export interface Task {
   subtasks?: Task[]
 }
 
+export type MeetingResponseValue =
+  | 'PENDING'
+  | 'ACCEPTED'
+  | 'DECLINED'
+  | 'TENTATIVE'
+
+export interface MeetingParticipant {
+  id: string
+  response: MeetingResponseValue
+  respondedAt: string | null
+  attended: boolean
+  user: { id: string; fullName: string; email: string }
+}
+
+export interface Meeting {
+  id: string
+  number: number
+  title: string
+  agenda: string | null
+  startsAt: string
+  endsAt: string
+  location: string | null
+  onlineLink: string | null
+  minutes: string | null
+  organizer: { id: string; fullName: string; email: string }
+  project: { id: string; number: number; title: string } | null
+  participants: MeetingParticipant[]
+}
+
 export interface Ticket {
   id: string
   number: number

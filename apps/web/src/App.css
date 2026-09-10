@@ -336,6 +336,39 @@ table.grid tbody tr:hover { background: #f8fafc; }
 .link-cell { cursor: pointer; }
 .link-cell:hover { text-decoration: underline; color: #2563eb; }
 
+/* ---------- Calendar ---------- */
+.cal-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.calendar {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #fff;
+}
+.cal-cell {
+  min-height: 96px; border-right: 1px solid #eef2f7; border-bottom: 1px solid #eef2f7;
+  padding: 5px; font-size: 12px;
+}
+.cal-cell:nth-child(7n) { border-right: none; }
+.cal-dow {
+  min-height: 0; background: #f8fafc; text-align: center; font-weight: 600;
+  color: #64748b; text-transform: uppercase; font-size: 10.5px; padding: 7px 0;
+}
+.cal-empty { background: #fafbfc; }
+.cal-today { background: #eff6ff; }
+.cal-daynum { color: #64748b; margin-bottom: 3px; }
+.cal-today .cal-daynum { color: #2563eb; font-weight: 700; }
+.cal-evt {
+  display: block; width: 100%; text-align: left; border: none; cursor: pointer;
+  background: #dbeafe; color: #1e40af; border-radius: 5px; padding: 2px 5px;
+  margin-top: 3px; font-size: 11px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-evt:hover { background: #bfdbfe; }
+
+.rsvp-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 10px 14px; margin: 10px 0; font-size: 13px;
+}
+
 .compose { display: flex; gap: 8px; margin-bottom: 14px; }
 .compose textarea { flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; resize: vertical; }
 

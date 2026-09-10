@@ -162,7 +162,12 @@ const TICKETS: DemoTicket[] = [
 ];
 
 async function reset() {
-  for (const et of [EntityType.TICKET, EntityType.PROJECT, EntityType.TASK]) {
+  for (const et of [
+    EntityType.TICKET,
+    EntityType.PROJECT,
+    EntityType.TASK,
+    EntityType.MEETING,
+  ]) {
     await prisma.notification.deleteMany({ where: { entityType: et } });
     await prisma.auditLog.deleteMany({ where: { entityType: et } });
     await prisma.activity.deleteMany({ where: { entityType: et } });
@@ -171,6 +176,8 @@ async function reset() {
     await prisma.commentMention.deleteMany({ where: { comment: { entityType: et } } });
     await prisma.comment.deleteMany({ where: { entityType: et } });
   }
+  await prisma.meetingParticipant.deleteMany({});
+  await prisma.meeting.deleteMany({});
   await prisma.task.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.ticket.deleteMany({});
@@ -430,8 +437,116 @@ async function main() {
     }
   }
 
+  // ---------- Meetings ----------
+  const day = 24 * 60 * 60 * 1000;
+  const at = (offsetDays: number, hour: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    d.setHours(hour, 0, 0, 0);
+    return d;
+  };
+  const MEETINGS: Array<{
+    title: string;
+    agenda: string;
+    organizer: string;
+    participants: string[];
+    start: Date;
+    durMin: number;
+    location?: string;
+    link?: string;
+    project?: string;
+  }> = [
+    {
+      title: 'Weekly IT Sync',
+      agenda: 'Open tickets, printer issue, O365 migration status.',
+      organizer: 'admin',
+      participants: ['hassan.r', 'omar.d'],
+      start: at(1, 10),
+      durMin: 30,
+      link: 'https://meet.example.com/it-sync',
+    },
+    {
+      title: 'B2B Sales Review',
+      agenda: 'Pipeline, target-customer list, quotation status.',
+      organizer: 'lena.m',
+      participants: ['yusuf.a', 'sara.k'],
+      start: at(2, 14),
+      durMin: 60,
+      location: 'Conference Room A',
+      project: 'B2B Sales Development',
+    },
+    {
+      title: 'Month-End Close Prep',
+      agenda: 'GL period fix, checklist walkthrough, owners for each step.',
+      organizer: 'admin',
+      participants: ['sara.k', 'omar.d'],
+      start: at(4, 9),
+      durMin: 45,
+      link: 'https://meet.example.com/month-end',
+      project: 'ERP Month-End Stabilisation',
+    },
+    {
+      title: 'Warehouse Barcode Kickoff',
+      agenda: 'Scanner model, pilot aisle, label printing plan.',
+      organizer: 'omar.d',
+      participants: ['admin', 'hassan.r'],
+      start: at(-3, 11),
+      durMin: 60,
+      location: 'Warehouse floor',
+      project: 'Warehouse Barcode Rollout',
+    },
+  ];
+
+  const projectIdByTitle = new Map(
+    (await prisma.project.findMany({ select: { id: true, title: true } })).map(
+      (p) => [p.title, p.id],
+    ),
+  );
+
+  let meetCount = 0;
+  for (const m of MEETINGS) {
+    const parts = [...new Set(m.participants)].filter((p) => p !== m.organizer);
+    const meeting = await prisma.meeting.create({
+      data: {
+        title: m.title,
+        agenda: m.agenda,
+        startsAt: m.start,
+        endsAt: new Date(m.start.getTime() + m.durMin * 60 * 1000),
+        organizerId: userId[m.organizer],
+        location: m.location ?? null,
+        onlineLink: m.link ?? null,
+        projectId: m.project ? projectIdByTitle.get(m.project) ?? null : null,
+        participants: {
+          create: parts.map((p, i) => ({
+            userId: userId[p],
+            // give the past meeting some responses + attendance
+            response:
+              m.start.getTime() < Date.now()
+                ? i === 0
+                  ? 'ACCEPTED'
+                  : 'TENTATIVE'
+                : 'PENDING',
+            respondedAt: m.start.getTime() < Date.now() ? new Date() : null,
+            attended: m.start.getTime() < Date.now() && i === 0,
+          })),
+        },
+      },
+    });
+    await prisma.auditLog.create({
+      data: {
+        entityType: EntityType.MEETING,
+        entityId: meeting.id,
+        action: 'CREATED',
+        summary: `scheduled meeting MTG-${String(meeting.number).padStart(4, '0')}`,
+        actorId: userId[m.organizer],
+      },
+    });
+    meetCount += 1;
+  }
+  void day;
+
   console.log(
-    `Demo data ready: ${USERS.length} users, ${TEAMS.length} teams, ${created} tickets, ${projCount} projects, ${taskCount} tasks.`,
+    `Demo data ready: ${USERS.length} users, ${TEAMS.length} teams, ${created} tickets, ${projCount} projects, ${taskCount} tasks, ${meetCount} meetings.`,
   );
   console.log(`All demo logins use password: ${PASSWORD}`);
   console.log('e.g.  admin@demo.opshub  /  sara.k@demo.opshub  /  lena.m@demo.opshub');

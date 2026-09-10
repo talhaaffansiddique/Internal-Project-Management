@@ -146,7 +146,22 @@ Each step restates scope + success criteria before code is written.
   *Done:* verified — API suite (visibility 403s, subtasks, status flow,
   progress 20%→29%, audit onto project) + browser (list, detail, task add,
   progress recompute).
-- [ ] **v1.2 — Meetings & Calendar** (invitations, RSVP, minutes, action items)
+- [x] **v1.2 — Meetings & Calendar** (build 1.2.0)
+  Schema: Meeting (MTG-0001, startsAt/endsAt, organizer, location + onlineLink,
+  related project, minutes, lastRemindedAt), MeetingParticipant (response
+  PENDING/ACCEPTED/DECLINED/TENTATIVE + respondedAt + attended).
+  API: `/meetings` list (from/to range for calendar) + CRUD; visibility =
+  organizer / participant / admin; `POST /meetings/:id/rsvp` (records who + when,
+  notifies organizer); `POST /:id/attendance` (organizer); `PUT /:id/minutes`;
+  `POST /:id/action-items` → creates an Activity (entityType MEETING) + notifies
+  assignee; `GET /me/meetings?upcoming=true`. Invitations on create.
+  Reminder job extended: meetings starting within 24h notify all participants.
+  Web: month calendar (prev/next/today, meeting chips) → MeetingDetail
+  (RSVP bar, participants + attendance, minutes editor, action-items list + add,
+  Files). "Meetings & Calendar" nav.
+  *Done:* verified — API suite (visibility 403, RSVP recorded+notified,
+  attendance, minutes, action-item→Activity→My Work+notification, reminder job,
+  full audit trail) + browser (calendar grid, meeting detail layout).
 - [ ] **v1.3 — Training** (checklist, materials, employee acknowledgement)
 - [ ] **v1.4 — Procurement** (supervisor routing, director path, quotations)
 - [ ] **v1.5 — Management Reporting**

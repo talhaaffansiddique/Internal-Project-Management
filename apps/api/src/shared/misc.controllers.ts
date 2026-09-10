@@ -188,8 +188,8 @@ export class AdminOpsController {
 
   @Post('run-reminders')
   @Roles('ADMIN', 'SUPER_ADMIN')
-  async runReminders() {
-    return { sent: await this.reminders.runNow() };
+  runReminders() {
+    return this.reminders.runNow();
   }
 }
 
