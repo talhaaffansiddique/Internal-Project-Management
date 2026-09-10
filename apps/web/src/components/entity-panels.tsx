@@ -26,6 +26,7 @@ export function Chatter({
   entityId: string
 }) {
   const [items, setItems] = useState<ChatterItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -33,7 +34,8 @@ export function Chatter({
     setItems(await api<ChatterItem[]>(`/${entityType}/${entityId}/chatter`))
   }
   useEffect(() => {
-    void load()
+    setLoading(true)
+    void load().finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityId])
 
@@ -69,7 +71,9 @@ export function Chatter({
           Post
         </button>
       </div>
-      {items.length === 0 ? (
+      {loading ? (
+        <p className="muted small">Loading…</p>
+      ) : items.length === 0 ? (
         <p className="muted small">No activity yet.</p>
       ) : (
         <ul className="feed">
@@ -336,10 +340,15 @@ export function EntityAudit({
   entityId: string
 }) {
   const [rows, setRows] = useState<AuditRow[]>([])
+  const [loading, setLoading] = useState(true)
   useEffect(() => {
-    void api<AuditRow[]>(`/${entityType}/${entityId}/audit`).then(setRows)
+    setLoading(true)
+    api<AuditRow[]>(`/${entityType}/${entityId}/audit`)
+      .then(setRows)
+      .finally(() => setLoading(false))
   }, [entityType, entityId])
 
+  if (loading) return <p className="muted small">Loading…</p>
   if (rows.length === 0) return <p className="muted small">No history.</p>
   return (
     <ul className="feed">

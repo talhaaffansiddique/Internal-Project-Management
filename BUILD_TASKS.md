@@ -115,9 +115,18 @@ Each step restates scope + success criteria before code is written.
   *Done:* verified — API scoped (admin open 11 / lena open 2) + browser
   (Dashboard cards + recent-ticket click-through, My Work sections).
 
-- [ ] **1.0.11 — Swap mockup for working UI**
-  Replace `mockup.html` screens with the real React app on live data.
-  *Done when:* full click-through works end to end on v1.0 scope.
+- [x] **1.0.11 — Final v1.0 integration pass**
+  Real React UI was built screen-by-screen through 1.0.3–1.0.10, so there was
+  no "swap" — this pass added loading states (chatter/audit panels), refreshed
+  the demo dataset, and ran a cross-role smoke test.
+  *Done:* all 8 demo roles verified — login / dashboard / me-work / tickets /
+  notifications all 200; ticket visibility scales by role (admin 14 → director 1);
+  `/users` is 200 for admin, 403 for everyone else. `mockup.html` retired
+  (kept as a reference artefact). README carries the v1.0 status + deferred list.
+
+---
+
+## ✅ v1.0 — Core Platform: COMPLETE (build 1.0.11)
 
 ---
 

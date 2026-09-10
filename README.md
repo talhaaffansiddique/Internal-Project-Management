@@ -5,7 +5,22 @@ approvals, activities, chatter, notifications, reporting and master data.
 
 Source of truth: `Internal_Company_Operations_Project_Brief_v1.docx`
 API plan: `API_Specification_v0.1.md`
-Clickable UI mockup (dummy data): `mockup.html`
+Historical dummy-data mockup (superseded by the live app): `mockup.html`
+
+## Status — v1.0 "Core Platform" is complete ✅
+
+| Area | Built |
+|---|---|
+| Auth | email + password, JWT cookie, `/auth/me`, change password |
+| People & org | users (invite / roles / status), roles, departments, teams + membership, designations, branches |
+| Master data | 17 configurable list types + designations/branches — add/edit/reorder/deactivate, Super-Admin only |
+| Shared blocks | attachments, chatter (comments + audit stream), @mentions, followers, activities, append-only audit trail |
+| Tickets | conditional forms per type, My/Team/Unassigned views, **visibility rules (§8.3)**, detail with discussion/activity/files/history |
+| Ticket workflow | validated status flow, close (records who + when), reopen (Admin only, mandatory reason) — §8.4 |
+| Notifications | in-app only: mentions, assignments, status changes, activity due-date reminders (hourly job); bell + click-through |
+| Home | Dashboard KPIs + recent tickets, My Work (my tickets + activities) — visibility-scoped |
+
+**Deferred to later versions** (per brief §22, §23): Projects & Tasks (v1.1), Meetings & Calendar (v1.2), Training (v1.3), Procurement + approvals (v1.4), management reporting (v1.5), email/WhatsApp + AI + native mobile (v2.0). File storage is local-disk in dev — swap `StorageService` for S3/Cloudflare R2 before go-live.
 
 ## Tech stack
 
