@@ -128,6 +128,19 @@ Each step restates scope + success criteria before code is written.
 
 ## Change requests
 
+- [x] **CR-2: Kanban + List views, theme switcher, rebrand** (build 1.2.2)
+  - `<Board>` component (collapsible columns, ◀▶ card move, count badges).
+    Projects page and Tasks page each get a **List / Board** toggle; Projects
+    board columns = project statuses, Tasks board columns = task statuses.
+  - Theme: `theme.tsx` (ThemeProvider + `useTheme` + `<ThemeSwitch>` ☀/☾/🖥),
+    persisted in localStorage, "system" follows `prefers-color-scheme`.
+    App.css fully tokenised (`--bg/--surface/--border/--text/…`) with a dark
+    palette; switch in the top bar and on the login card.
+  - Rebrand: "OP → C&C", "OpsHub → Captain Project Management" (sidebar, login,
+    browser tab title).
+  - Verified in browser: dark/light toggle across all pages, board card move
+    persists, rebrand strings, `<title>`.
+
 - [x] **CR-1: remove Priority entirely; show creation dates in every list** (build 1.2.1)
   - Dropped `Ticket.priority` and `Task.priority` columns (migration `remove_priority`);
     removed the `priorities` master-data type + values (core seed now deletes them).

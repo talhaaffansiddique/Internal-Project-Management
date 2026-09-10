@@ -3,6 +3,7 @@ import { api } from '../../api'
 import { useAuth } from '../../auth'
 import type { Project, UserLookup } from '../../types'
 import { Modal, Field, ErrorText } from '../../ui'
+import { Board } from '../../components/Board'
 import ProjectDetail from './ProjectDetail'
 
 const PRJ_LABEL: Record<string, string> = {
@@ -13,7 +14,12 @@ const PRJ_LABEL: Record<string, string> = {
   on_hold: 'On Hold',
   completed: 'Completed',
 }
+const PRJ_COLUMNS = Object.entries(PRJ_LABEL).map(([key, label]) => ({ key, label }))
 const projectNo = (n: number) => `PRJ-${String(n).padStart(4, '0')}`
+const initials = (name: string) =>
+  name.split(' ').map((p) => p[0]).slice(0, 2).join('')
+const shortDate = (d: string | null) =>
+  d ? new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null
 
 export default function Projects({
   initialProjectId,
@@ -28,6 +34,16 @@ export default function Projects({
   const [statusFilter, setStatusFilter] = useState('')
   const [q, setQ] = useState('')
   const [creating, setCreating] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
+
+  async function moveProject(id: string, statusKey: string) {
+    setRows((cur) => cur.map((p) => (p.id === id ? { ...p, statusKey } : p)))
+    await api(`/projects/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ statusKey }),
+    })
+    void load()
+  }
 
   useEffect(() => {
     if (initialProjectId) {
@@ -70,9 +86,25 @@ export default function Projects({
             or are a member of.
           </p>
         </div>
-        <button className="btn primary" onClick={() => setCreating(true)}>
-          + New project
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div className="view-toggle">
+            <button
+              className={viewMode === 'list' ? 'active' : ''}
+              onClick={() => setViewMode('list')}
+            >
+              List
+            </button>
+            <button
+              className={viewMode === 'board' ? 'active' : ''}
+              onClick={() => setViewMode('board')}
+            >
+              Board
+            </button>
+          </div>
+          <button className="btn primary" onClick={() => setCreating(true)}>
+            + New project
+          </button>
+        </div>
       </div>
 
       <div className="filters">
@@ -81,18 +113,50 @@ export default function Projects({
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">Any status</option>
-          {Object.entries(PRJ_LABEL).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
+        {viewMode === 'list' && (
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="">Any status</option>
+            {Object.entries(PRJ_LABEL).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {loading ? (
         <p className="muted">Loading…</p>
       ) : rows.length === 0 ? (
         <p className="muted">No projects yet.</p>
+      ) : viewMode === 'board' ? (
+        <Board
+          columns={PRJ_COLUMNS}
+          onMove={moveProject}
+          onOpen={setOpenId}
+          items={rows.map((p) => {
+            const totalTasks = Object.values(p.taskCounts).reduce((a, b) => a + b, 0)
+            const range = [shortDate(p.startDate), shortDate(p.targetDate)].filter(Boolean)
+            return {
+              id: p.id,
+              columnKey: p.statusKey,
+              node: (
+                <>
+                  <div className="kard-title">
+                    <span className="star">☆</span> {p.title}
+                  </div>
+                  {range.length > 0 && (
+                    <div className="kard-meta">
+                      <span>⏱</span> {range.join(' → ')}
+                    </div>
+                  )}
+                  <div className="kard-foot">
+                    <span className="tasks">{totalTasks} Tasks</span>
+                    <span className="mini-avatar">{initials(p.owner.fullName)}</span>
+                  </div>
+                </>
+              ),
+            }
+          })}
+        />
       ) : (
         <table className="grid">
           <thead>

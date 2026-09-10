@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth'
+import { ThemeSwitch } from '../theme'
 
 export default function Login() {
   const { login } = useAuth()
@@ -24,7 +25,10 @@ export default function Login() {
   return (
     <div className="login-wrap">
       <form className="login-card" onSubmit={onSubmit}>
-        <h1>OpsHub</h1>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+          <ThemeSwitch />
+        </div>
+        <h1>Captain Project Management</h1>
         <p className="sub">Internal Company Operations Platform</p>
 
         <label>

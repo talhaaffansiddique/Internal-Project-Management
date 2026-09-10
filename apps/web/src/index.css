@@ -1,9 +1,9 @@
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
 }
 
 body {
   margin: 0;
-  background: #f4f6f9;
   min-height: 100vh;
+  background: var(--bg, #f4f6f9);
 }

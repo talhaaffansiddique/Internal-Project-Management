@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './auth'
 import { api } from './api'
 import { NotificationBell } from './components/NotificationBell'
+import { ThemeSwitch } from './theme'
 import { APP_VERSION, APP_PHASE } from './version'
 import Dashboard from './pages/Dashboard'
 import Users from './pages/admin/Users'
@@ -85,7 +86,7 @@ export default function AdminApp() {
     <div className="layout">
       <aside className="sidebar">
         <div className="side-brand">
-          <span className="logo">OP</span> OpsHub
+          <span className="logo">C&amp;C</span> Captain Project Management
         </div>
         {groups.map((g) => (
           <div key={g}>
@@ -116,6 +117,7 @@ export default function AdminApp() {
         <header className="topbar">
           <div className="phase">{APP_PHASE}</div>
           <div className="who">
+            <ThemeSwitch />
             <NotificationBell
               count={unread}
               onRefresh={refreshUnread}

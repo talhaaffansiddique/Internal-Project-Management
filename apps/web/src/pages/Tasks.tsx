@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import type { Task } from '../types'
+import { Board } from '../components/Board'
 
 const GROUPS = [
   { key: 'todo', label: 'To Do' },
@@ -9,6 +10,8 @@ const GROUPS = [
   { key: 'done', label: 'Done' },
 ]
 const taskNo = (n: number) => `TSK-${String(n).padStart(4, '0')}`
+const initials = (name: string) =>
+  name.split(' ').map((p) => p[0]).slice(0, 2).join('')
 
 export default function Tasks({
   onOpenProject,
@@ -17,6 +20,7 @@ export default function Tasks({
 }) {
   const [rows, setRows] = useState<Task[]>([])
   const [view, setView] = useState<'mine' | 'all'>('mine')
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
   const [loading, setLoading] = useState(true)
 
   async function load() {
@@ -33,11 +37,17 @@ export default function Tasks({
   }, [view])
 
   async function setStatus(id: string, statusKey: string) {
+    setRows((cur) => cur.map((t) => (t.id === id ? { ...t, statusKey } : t)))
     await api(`/tasks/${id}/status`, {
       method: 'POST',
       body: JSON.stringify({ statusKey }),
     })
     void load()
+  }
+
+  function openTasksProject(taskId: string) {
+    const t = rows.find((r) => r.id === taskId)
+    if (t?.project) onOpenProject(t.project.id)
   }
 
   return (
@@ -46,6 +56,20 @@ export default function Tasks({
         <div>
           <h1>Tasks</h1>
           <p className="muted">Tasks across all your projects.</p>
+        </div>
+        <div className="view-toggle">
+          <button
+            className={viewMode === 'list' ? 'active' : ''}
+            onClick={() => setViewMode('list')}
+          >
+            List
+          </button>
+          <button
+            className={viewMode === 'board' ? 'active' : ''}
+            onClick={() => setViewMode('board')}
+          >
+            Board
+          </button>
         </div>
       </div>
 
@@ -68,6 +92,34 @@ export default function Tasks({
         <p className="muted">Loading…</p>
       ) : rows.length === 0 ? (
         <p className="muted">No tasks.</p>
+      ) : viewMode === 'board' ? (
+        <Board
+          columns={GROUPS}
+          onMove={setStatus}
+          onOpen={openTasksProject}
+          items={rows.map((t) => ({
+            id: t.id,
+            columnKey: t.statusKey,
+            node: (
+              <>
+                <div className="kard-title">{t.title}</div>
+                <div className="kard-meta">
+                  {t.project?.title ?? '—'}
+                </div>
+                <div className="kard-foot">
+                  <span className="muted small">
+                    {new Date(t.createdAt).toLocaleDateString()}
+                  </span>
+                  {t.assignee && (
+                    <span className="mini-avatar">
+                      {initials(t.assignee.fullName)}
+                    </span>
+                  )}
+                </div>
+              </>
+            ),
+          }))}
+        />
       ) : (
         GROUPS.map((g) => {
           const items = rows.filter((t) => t.statusKey === g.key)
@@ -100,7 +152,10 @@ export default function Tasks({
                         <td className="muted small" style={{ width: 100 }}>
                           {new Date(t.createdAt).toLocaleDateString()}
                         </td>
-                        <td style={{ width: 150 }} onClick={(e) => e.stopPropagation()}>
+                        <td
+                          style={{ width: 150 }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <select
                             value={t.statusKey}
                             onChange={(e) => setStatus(t.id, e.target.value)}
