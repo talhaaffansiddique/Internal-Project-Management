@@ -12,7 +12,13 @@ interface Notification {
   createdAt: string
 }
 
-export default function Notifications({ onChanged }: { onChanged?: () => void }) {
+export default function Notifications({
+  onChanged,
+  onOpenTicket,
+}: {
+  onChanged?: () => void
+  onOpenTicket?: (id: string) => void
+}) {
   const [rows, setRows] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -28,11 +34,17 @@ export default function Notifications({ onChanged }: { onChanged?: () => void })
     void load()
   }, [])
 
-  async function markRead(id: string) {
-    await api(`/notifications/${id}/read`, { method: 'POST' })
-    void load()
-    onChanged?.()
+  async function activate(n: Notification) {
+    if (!n.readAt) {
+      await api(`/notifications/${n.id}/read`, { method: 'POST' })
+      void load()
+      onChanged?.()
+    }
+    if (n.entityType === 'TICKET' && n.entityId) {
+      onOpenTicket?.(n.entityId)
+    }
   }
+
   async function markAll() {
     await api('/notifications/read-all', { method: 'POST' })
     void load()
@@ -40,15 +52,15 @@ export default function Notifications({ onChanged }: { onChanged?: () => void })
   }
 
   const unread = rows.filter((r) => !r.readAt).length
+  const clickable = (n: Notification) =>
+    n.entityType === 'TICKET' && !!n.entityId
 
   return (
     <div>
       <div className="page-head">
         <div>
           <h1>Notifications</h1>
-          <p className="muted">
-            In-app only for now — {unread} unread.
-          </p>
+          <p className="muted">In-app only for now — {unread} unread.</p>
         </div>
         {unread > 0 && (
           <button className="btn" onClick={markAll}>
@@ -66,13 +78,18 @@ export default function Notifications({ onChanged }: { onChanged?: () => void })
           {rows.map((n) => (
             <div
               key={n.id}
-              className={`notif ${n.readAt ? '' : 'unread'}`}
-              onClick={() => !n.readAt && markRead(n.id)}
+              className={`notif ${n.readAt ? '' : 'unread'} ${
+                clickable(n) ? 'link' : ''
+              }`}
+              onClick={() => (clickable(n) || !n.readAt) && activate(n)}
             >
               <span className="badge muted">{n.type.toLowerCase()}</span>
               <div className="notif-main">
                 <b>{n.title}</b>
                 {n.body && <div className="muted small">{n.body}</div>}
+                {clickable(n) && (
+                  <div className="muted small">Open ticket →</div>
+                )}
               </div>
               <span className="muted small">
                 {new Date(n.createdAt).toLocaleString()}

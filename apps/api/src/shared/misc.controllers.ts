@@ -26,6 +26,7 @@ import {
 import { ActivitiesService } from './activities.service.js';
 import { NotificationsService } from './notifications.service.js';
 import { AuditService } from './audit.service.js';
+import { RemindersService } from './reminders.service.js';
 import {
   CreateActivityDto,
   EditCommentDto,
@@ -178,6 +179,17 @@ export class NotificationsController {
   @Post(':id/read')
   read(@Param('id') id: string, @CurrentUser('id') userId: string) {
     return this.notifications.markRead(userId, id);
+  }
+}
+
+@Controller('admin')
+export class AdminOpsController {
+  constructor(private readonly reminders: RemindersService) {}
+
+  @Post('run-reminders')
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  async runReminders() {
+    return { sent: await this.reminders.runNow() };
   }
 }
 

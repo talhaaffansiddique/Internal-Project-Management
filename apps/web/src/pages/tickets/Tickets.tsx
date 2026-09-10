@@ -21,8 +21,22 @@ const VIEWS = [
   ['unassigned', 'Unassigned'],
 ] as const
 
-export default function Tickets() {
-  const [openId, setOpenId] = useState<string | null>(null)
+export default function Tickets({
+  initialTicketId,
+  onConsumed,
+}: {
+  initialTicketId?: string | null
+  onConsumed?: () => void
+} = {}) {
+  const [openId, setOpenId] = useState<string | null>(initialTicketId ?? null)
+
+  useEffect(() => {
+    if (initialTicketId) {
+      setOpenId(initialTicketId)
+      onConsumed?.()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTicketId])
   const [rows, setRows] = useState<Ticket[]>([])
   const [forms, setForms] = useState<TicketForm[]>([])
   const [loading, setLoading] = useState(true)

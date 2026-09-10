@@ -77,9 +77,43 @@ body {
   border-bottom: 1px solid #eef2f7; font-size: 13px;
 }
 .notif:last-child { border-bottom: none; }
-.notif.unread { background: #f0f7ff; cursor: pointer; }
-.notif.unread:hover { background: #e6f0fe; }
+.notif.unread { background: #f0f7ff; }
+.notif.link, .notif.unread { cursor: pointer; }
+.notif.link:hover, .notif.unread:hover { background: #e6f0fe; }
 .notif-main { flex: 1; min-width: 0; }
+
+/* ---------- Notification bell ---------- */
+.bell-wrap { position: relative; }
+.bell-btn {
+  border: 1px solid #cbd5e1; background: #fff; border-radius: 8px;
+  width: 34px; height: 34px; font-size: 15px; cursor: pointer; position: relative;
+  display: grid; place-items: center;
+}
+.bell-btn:hover { background: #f8fafc; }
+.bell-count {
+  position: absolute; top: -6px; right: -6px; background: #dc2626; color: #fff;
+  font-size: 10px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 9px;
+  display: grid; place-items: center; padding: 0 3px;
+}
+.bell-menu {
+  position: absolute; right: 0; top: 40px; width: 300px; background: #fff;
+  border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 12px 30px rgba(15,23,42,.16);
+  z-index: 60; overflow: hidden;
+}
+.bell-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px;
+}
+.bell-item {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  border-bottom: 1px solid #f1f5f9; padding: 9px 12px; cursor: pointer; font-size: 12.5px;
+}
+.bell-item:hover { background: #f8fafc; }
+.bell-item.unread { background: #f0f7ff; }
+.bell-all {
+  display: block; width: 100%; text-align: center; padding: 9px; font-size: 12.5px;
+  background: #f8fafc; border: none; cursor: pointer;
+}
 
 .content { display: flex; flex-direction: column; min-width: 0; }
 .topbar {

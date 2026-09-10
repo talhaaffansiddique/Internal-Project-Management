@@ -90,9 +90,18 @@ Each step restates scope + success criteria before code is written.
   close-via-status 400, requester close, non-admin reopen 403, reopen-no-reason
   400, reopen with reason) + browser status change + audit trail.
 
-- [ ] **1.0.9 — In-app notifications**
-  Mentions, assignments, status changes, approvals, activity due dates.
-  *Done when:* assigning a ticket notifies the assignee in-app.
+- [x] **1.0.9 — In-app notifications**
+  Triggers wired: @mention (1.0.6), ticket + activity assignment (1.0.6/1.0.7),
+  ticket status change (1.0.8), and now **activity due-date reminders** —
+  `RemindersService` `@Cron(EVERY_HOUR)` finds OPEN activities due within 24h
+  (or overdue), notifies the assignee once per ~day (`lastRemindedAt` cooldown);
+  `POST /admin/run-reminders` triggers it on demand (admin only).
+  Web: notification **bell** in the top bar (dropdown: recent 8, mark-all-read,
+  see-all); clicking a ticket notification (bell or Notifications page) opens
+  that ticket.
+  *Done:* verified — reminder API suite (overdue vs due-soon, cooldown→0,
+  completed excluded, 403 non-admin) + browser (bell dropdown, click-through
+  to TKT-0001).
 
 - [ ] **1.0.10 — Dashboard + My Work**
   Real data: my tickets, my activities, pending approvals, overdue, upcoming.

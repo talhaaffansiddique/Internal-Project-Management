@@ -6,9 +6,11 @@ import { FollowersService } from './followers.service.js';
 import { AttachmentsService } from './attachments.service.js';
 import { CommentsService } from './comments.service.js';
 import { ActivitiesService } from './activities.service.js';
+import { RemindersService } from './reminders.service.js';
 import { SharedEntityController } from './shared.controller.js';
 import {
   ActivitiesController,
+  AdminOpsController,
   AttachmentsController,
   AuditController,
   CommentsController,
@@ -24,6 +26,7 @@ import {
     ActivitiesController,
     NotificationsController,
     AuditController,
+    AdminOpsController,
   ],
   providers: [
     StorageService,
@@ -33,6 +36,7 @@ import {
     AttachmentsService,
     CommentsService,
     ActivitiesService,
+    RemindersService,
   ],
   exports: [
     AuditService,

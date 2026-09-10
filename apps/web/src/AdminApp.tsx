@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './auth'
 import { api } from './api'
+import { NotificationBell } from './components/NotificationBell'
 import Users from './pages/admin/Users'
 import Departments from './pages/admin/Departments'
 import Teams from './pages/admin/Teams'
@@ -34,6 +35,7 @@ export default function AdminApp() {
   const { user, logout } = useAuth()
   const [view, setView] = useState<View>('dashboard')
   const [unread, setUnread] = useState(0)
+  const [ticketToOpen, setTicketToOpen] = useState<string | null>(null)
 
   const refreshUnread = useCallback(() => {
     api<{ count: number }>('/notifications/unread-count')
@@ -46,6 +48,11 @@ export default function AdminApp() {
     const t = setInterval(refreshUnread, 30000)
     return () => clearInterval(t)
   }, [refreshUnread])
+
+  function openTicket(id: string) {
+    setTicketToOpen(id)
+    setView('tickets')
+  }
 
   const canAdmin = !!user?.roles.some(
     (r) => r === 'ADMIN' || r === 'SUPER_ADMIN',
@@ -90,8 +97,14 @@ export default function AdminApp() {
 
       <div className="content">
         <header className="topbar">
-          <div className="phase">Phase 1.0.8 — ticket status flow</div>
+          <div className="phase">Phase 1.0.9 — in-app notifications</div>
           <div className="who">
+            <NotificationBell
+              count={unread}
+              onRefresh={refreshUnread}
+              onOpenTicket={openTicket}
+              onSeeAll={() => setView('notifications')}
+            />
             <span className="avatar">{initials}</span>
             <div>
               <b>{user!.fullName}</b>
@@ -114,8 +127,15 @@ export default function AdminApp() {
             </div>
           )}
           {view === 'mywork' && <MyWork />}
-          {view === 'tickets' && <Tickets />}
-          {view === 'notifications' && <Notifications onChanged={refreshUnread} />}
+          {view === 'tickets' && (
+            <Tickets
+              initialTicketId={ticketToOpen}
+              onConsumed={() => setTicketToOpen(null)}
+            />
+          )}
+          {view === 'notifications' && (
+            <Notifications onChanged={refreshUnread} onOpenTicket={openTicket} />
+          )}
           {view === 'users' && canAdmin && <Users />}
           {view === 'departments' && canAdmin && <Departments />}
           {view === 'teams' && canAdmin && <Teams />}
