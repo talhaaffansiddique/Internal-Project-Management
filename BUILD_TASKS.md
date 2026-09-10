@@ -193,7 +193,30 @@ Each step restates scope + success criteria before code is written.
   *Done:* verified — API suite (visibility 403, RSVP recorded+notified,
   attendance, minutes, action-item→Activity→My Work+notification, reminder job,
   full audit trail) + browser (calendar grid, meeting detail layout).
-- [ ] **v1.3 — Training** (checklist, materials, employee acknowledgement)
+- [x] **v1.3 — Training Management** (build 1.3.0)
+  Schema: Training (TRN-0001, topic, categoryKey, type INDIVIDUAL|GROUP, trainer,
+  scheduledAt, statusKey, completedAt, lastRemindedAt), TrainingParticipant
+  (ackStatus PENDING|CONFIRMED|NEEDS_FOLLOW_UP + ackAt + ackComment),
+  TrainingChecklistItem.
+  API: `/trainings` CRUD; visibility = trainer / participant / creator / admin;
+  `POST /trainings/:id/status` — brief §13.1 flow (Requested→Scheduled→In Progress
+  →Trainer Checklist→Waiting for Acknowledgement→Completed) + one step back;
+  **completion blocked until every participant has CONFIRMED**. Checklist
+  add/toggle/remove (trainer/creator/admin). Participants add/remove.
+  `POST /trainings/:id/acknowledge` — participant CONFIRMED / NEEDS_FOLLOW_UP
+  (+ comment); notifies trainer + creator; audited. Materials via shared
+  attachments (entityType TRAINING). `GET /me/trainings`. Reminder job extended
+  for scheduled trainings within 24h.
+  Web: Training list + New-training modal (topic, category, type, trainer,
+  schedule, checklist lines, participants) → TrainingDetail (status bar,
+  participants+ack, trainer checklist, materials, acknowledgement panel for
+  participants when waiting_ack, Discussion/History tabs). "Training" nav.
+  *Done:* verified — API suite (visibility 403, ack recorded, complete-blocked-
+  until-all-confirmed 400, status flow, checklist toggle, notifications, audit)
+  + browser (list, detail, participant "Confirm completed" updates the badge).
+
+  Also: dev web port 5173 → **5180** (`strictPort`) — 5173 was taken by another
+  local project; WEB_ORIGIN + README updated.
 - [ ] **v1.4 — Procurement** (supervisor routing, director path, quotations)
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

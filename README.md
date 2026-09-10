@@ -36,7 +36,7 @@ Historical dummy-data mockup (superseded by the live app): `mockup.html`
 ```
 apps/
   api/   NestJS API  (runs on http://localhost:4000, prefix /api/v1)
-  web/   React app   (runs on http://localhost:5173, proxies /api → api)
+  web/   React app   (runs on http://localhost:5180, proxies /api → api)
 ```
 
 ## First-time setup
@@ -115,7 +115,7 @@ npm run dev
 ```
 
 - API:  http://localhost:4000/api/v1/health
-- App:  http://localhost:5173
+- App:  http://localhost:5180
 
 **Step 1.0.1 is done when** the web page shows both *API status* and *Database* in green.
 

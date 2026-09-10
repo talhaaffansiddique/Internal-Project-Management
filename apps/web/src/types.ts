@@ -172,6 +172,41 @@ export interface Meeting {
   participants: MeetingParticipant[]
 }
 
+export type TrainingAckValue = 'PENDING' | 'CONFIRMED' | 'NEEDS_FOLLOW_UP'
+
+export interface TrainingParticipant {
+  id: string
+  ackStatus: TrainingAckValue
+  ackAt: string | null
+  ackComment: string | null
+  user: { id: string; fullName: string; email: string }
+}
+
+export interface TrainingChecklistItem {
+  id: string
+  label: string
+  done: boolean
+  doneAt: string | null
+  sortOrder: number
+}
+
+export interface Training {
+  id: string
+  number: number
+  topic: string
+  description: string | null
+  categoryKey: string | null
+  type: 'INDIVIDUAL' | 'GROUP'
+  statusKey: string
+  scheduledAt: string | null
+  completedAt: string | null
+  createdAt: string
+  trainer: { id: string; fullName: string; email: string }
+  createdBy: { id: string; fullName: string }
+  participants: TrainingParticipant[]
+  checklist: TrainingChecklistItem[]
+}
+
 export interface Ticket {
   id: string
   number: number

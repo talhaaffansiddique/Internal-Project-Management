@@ -166,6 +166,7 @@ async function reset() {
     EntityType.PROJECT,
     EntityType.TASK,
     EntityType.MEETING,
+    EntityType.TRAINING,
   ]) {
     await prisma.notification.deleteMany({ where: { entityType: et } });
     await prisma.auditLog.deleteMany({ where: { entityType: et } });
@@ -175,6 +176,9 @@ async function reset() {
     await prisma.commentMention.deleteMany({ where: { comment: { entityType: et } } });
     await prisma.comment.deleteMany({ where: { entityType: et } });
   }
+  await prisma.trainingChecklistItem.deleteMany({});
+  await prisma.trainingParticipant.deleteMany({});
+  await prisma.training.deleteMany({});
   await prisma.meetingParticipant.deleteMany({});
   await prisma.meeting.deleteMany({});
   await prisma.task.deleteMany({});
@@ -542,8 +546,127 @@ async function main() {
   }
   void day;
 
+  // ---------- Training ----------
+  const TRAININGS: Array<{
+    topic: string;
+    category: string;
+    type: 'INDIVIDUAL' | 'GROUP';
+    trainer: string;
+    creator: string;
+    status: string;
+    offsetDays: number;
+    participants: string[];
+    checklist: [string, boolean][];
+    acks?: [string, 'CONFIRMED' | 'NEEDS_FOLLOW_UP', string?][];
+  }> = [
+    {
+      topic: 'ERP Invoicing Basics',
+      category: 'erp',
+      type: 'GROUP',
+      trainer: 'admin',
+      creator: 'nadia.f',
+      status: 'waiting_ack',
+      offsetDays: -2,
+      participants: ['sara.k', 'lena.m', 'priya.n'],
+      checklist: [
+        ['Walk through invoice creation', true],
+        ['Demonstrate credit notes', true],
+        ['Practice: each participant posts a test invoice', true],
+        ['Q&A and common errors', true],
+      ],
+      acks: [['sara.k', 'CONFIRMED', 'Clear, thanks.']],
+    },
+    {
+      topic: 'Warehouse Scanner Handling',
+      category: 'operations',
+      type: 'GROUP',
+      trainer: 'omar.d',
+      creator: 'omar.d',
+      status: 'scheduled',
+      offsetDays: 3,
+      participants: ['hassan.r', 'lena.m'],
+      checklist: [
+        ['Device care and charging', false],
+        ['Scanning a putaway', false],
+        ['Handling scan errors', false],
+      ],
+    },
+    {
+      topic: 'Data Privacy Refresher',
+      category: 'compliance',
+      type: 'GROUP',
+      trainer: 'nadia.f',
+      creator: 'nadia.f',
+      status: 'completed',
+      offsetDays: -14,
+      participants: ['sara.k', 'omar.d', 'yusuf.a'],
+      checklist: [
+        ['Policy walkthrough', true],
+        ['Real incident examples', true],
+        ['Short quiz', true],
+      ],
+      acks: [
+        ['sara.k', 'CONFIRMED'],
+        ['omar.d', 'CONFIRMED'],
+        ['yusuf.a', 'CONFIRMED'],
+      ],
+    },
+  ];
+
+  let trnCount = 0;
+  for (const tr of TRAININGS) {
+    const parts = [...new Set(tr.participants)].filter((p) => p !== tr.trainer);
+    const scheduled = new Date();
+    scheduled.setDate(scheduled.getDate() + tr.offsetDays);
+    scheduled.setHours(14, 0, 0, 0);
+    const ackMap = new Map(
+      (tr.acks ?? []).map((a) => [a[0], { status: a[1], comment: a[2] ?? null }]),
+    );
+    const training = await prisma.training.create({
+      data: {
+        topic: tr.topic,
+        categoryKey: tr.category,
+        type: tr.type,
+        trainerId: userId[tr.trainer],
+        createdById: userId[tr.creator],
+        statusKey: tr.status,
+        scheduledAt: scheduled,
+        completedAt: tr.status === 'completed' ? new Date() : null,
+        participants: {
+          create: parts.map((p) => {
+            const ack = ackMap.get(p);
+            return {
+              userId: userId[p],
+              ackStatus: ack ? ack.status : 'PENDING',
+              ackAt: ack ? new Date() : null,
+              ackComment: ack?.comment ?? null,
+            };
+          }),
+        },
+        checklist: {
+          create: tr.checklist.map(([label, done], i) => ({
+            label,
+            done,
+            doneAt: done ? new Date() : null,
+            sortOrder: i,
+          })),
+        },
+      },
+    });
+    await prisma.auditLog.create({
+      data: {
+        entityType: EntityType.TRAINING,
+        entityId: training.id,
+        action: 'CREATED',
+        summary: `requested training TRN-${String(training.number).padStart(4, '0')}`,
+        actorId: userId[tr.creator],
+      },
+    });
+    trnCount += 1;
+  }
+
   console.log(
-    `Demo data ready: ${USERS.length} users, ${TEAMS.length} teams, ${created} tickets, ${projCount} projects, ${taskCount} tasks, ${meetCount} meetings.`,
+    `Demo data ready: ${USERS.length} users, ${TEAMS.length} teams, ${created} tickets, ${projCount} projects, ${taskCount} tasks, ${meetCount} meetings, ${trnCount} trainings.`,
   );
   console.log(`All demo logins use password: ${PASSWORD}`);
   console.log('e.g.  admin@demo.opshub  /  sara.k@demo.opshub  /  lena.m@demo.opshub');

@@ -19,16 +19,20 @@ export class RemindersService {
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleCron() {
-    const { activities, meetings } = await this.runNow();
-    if (activities + meetings > 0) {
+    const r = await this.runNow();
+    if (r.activities + r.meetings + r.trainings > 0) {
       this.logger.log(
-        `Reminders sent — activities: ${activities}, meetings: ${meetings}`,
+        `Reminders sent — activities: ${r.activities}, meetings: ${r.meetings}, trainings: ${r.trainings}`,
       );
     }
   }
 
   /** Also callable on demand via POST /admin/run-reminders. */
-  async runNow(): Promise<{ activities: number; meetings: number }> {
+  async runNow(): Promise<{
+    activities: number;
+    meetings: number;
+    trainings: number;
+  }> {
     const now = new Date();
     const dueBefore = new Date(now.getTime() + DUE_SOON_MS);
     const cooldownBefore = new Date(now.getTime() - REMIND_COOLDOWN_MS);
@@ -89,6 +93,40 @@ export class RemindersService {
       });
     }
 
-    return { activities: activities.length, meetings: meetings.length };
+    // ---- Training reminders (scheduled within 24h, not yet run) ----
+    const trainings = await this.prisma.training.findMany({
+      where: {
+        scheduledAt: { gte: now, lte: dueBefore },
+        statusKey: { in: ['requested', 'scheduled'] },
+        OR: [
+          { lastRemindedAt: null },
+          { lastRemindedAt: { lt: cooldownBefore } },
+        ],
+      },
+      include: { participants: { select: { userId: true } } },
+    });
+    for (const tr of trainings) {
+      const recipients = [
+        tr.trainerId,
+        ...tr.participants.map((p) => p.userId),
+      ];
+      await this.notifications.notifyMany(recipients, {
+        type: NotificationType.MEETING_REMINDER,
+        title: `Training soon: ${tr.topic}`,
+        body: tr.scheduledAt?.toLocaleString(),
+        entityType: EntityType.TRAINING,
+        entityId: tr.id,
+      });
+      await this.prisma.training.update({
+        where: { id: tr.id },
+        data: { lastRemindedAt: now },
+      });
+    }
+
+    return {
+      activities: activities.length,
+      meetings: meetings.length,
+      trainings: trainings.length,
+    };
   }
 }

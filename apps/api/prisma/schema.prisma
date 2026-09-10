@@ -51,6 +51,17 @@ enum MeetingResponse {
   TENTATIVE
 }
 
+enum TrainingType {
+  INDIVIDUAL
+  GROUP
+}
+
+enum TrainingAck {
+  PENDING
+  CONFIRMED
+  NEEDS_FOLLOW_UP
+}
+
 enum NotificationType {
   MENTION
   ASSIGNMENT
@@ -105,6 +116,9 @@ model User {
   tasksCreated        Task[]           @relation("TaskCreator")
   meetingsOrganized   Meeting[]        @relation("MeetingOrganizer")
   meetingParticipations MeetingParticipant[]
+  trainingsAsTrainer  Training[]       @relation("TrainingTrainer")
+  trainingsCreated    Training[]       @relation("TrainingCreator")
+  trainingParticipations TrainingParticipant[]
 
   @@index([primaryDepartmentId])
   @@index([supervisorId])
@@ -528,4 +542,64 @@ model MeetingParticipant {
 
   @@unique([meetingId, userId])
   @@map("meeting_participants")
+}
+
+// ============================================================
+// Training Management (brief §13)
+// ============================================================
+
+model Training {
+  id             String       @id @default(uuid())
+  number         Int          @unique @default(autoincrement())
+  topic          String
+  description    String?
+  categoryKey    String? // master-data key: training_categories
+  type           TrainingType @default(GROUP)
+  trainerId      String
+  scheduledAt    DateTime?
+  statusKey      String       @default("requested") // master-data key: training_statuses
+  completedAt    DateTime?
+  lastRemindedAt DateTime?
+  createdById    String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  trainer      User                    @relation("TrainingTrainer", fields: [trainerId], references: [id])
+  createdBy    User                    @relation("TrainingCreator", fields: [createdById], references: [id])
+  participants TrainingParticipant[]
+  checklist    TrainingChecklistItem[]
+
+  @@index([statusKey])
+  @@index([trainerId])
+  @@map("trainings")
+}
+
+model TrainingParticipant {
+  id         String      @id @default(uuid())
+  trainingId String
+  userId     String
+  ackStatus  TrainingAck @default(PENDING)
+  ackAt      DateTime?
+  ackComment String?
+  createdAt  DateTime    @default(now())
+
+  training Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([trainingId, userId])
+  @@map("training_participants")
+}
+
+model TrainingChecklistItem {
+  id         String    @id @default(uuid())
+  trainingId String
+  label      String
+  done       Boolean   @default(false)
+  doneAt     DateTime?
+  sortOrder  Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  training Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+
+  @@map("training_checklist_items")
 }
