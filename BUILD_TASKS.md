@@ -247,5 +247,19 @@ Each step restates scope + success criteria before code is written.
   in the app from this one file — no per-module changes needed.
   *Done:* `npm run build --workspace apps/web` clean; verified in browser on
   Procurement PR-0012's Files tab (dropzone renders, themed correctly).
+- [x] **CR-4 — File-upload contrast + audit trail for attachments**
+  Dropzone text color switched from `--text-muted` to `--text` (bold) so it's
+  clearly legible on light backgrounds, not just dark.
+  Backend: `AttachmentsService.linkToEntity` and `.remove`
+  (apps/api/src/shared/attachments.service.ts) now write to the AuditLog
+  (`ATTACHMENT_ADDED` / `ATTACHMENT_REMOVED`, e.g. "Priya Nair uploaded a
+  file — quote.pdf") and notify followers, exactly like comments/status
+  changes already do — so every file add/remove now shows up in the
+  entity's History tab (and Discussion feed) for anyone who can view the
+  record, per brief §17 (audit log).
+  *Done:* `npm run build` clean for both apps; verified via API — uploaded +
+  linked a file to PR-0012 as Priya Nair, confirmed `/procurement-
+  requests/:id/audit` returns `ATTACHMENT_ADDED — uploaded a file —
+  dnd-test.txt`; test attachment cleaned up afterward.
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

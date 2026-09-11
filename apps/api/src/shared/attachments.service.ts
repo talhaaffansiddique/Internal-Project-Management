@@ -6,6 +6,10 @@ import {
 import { EntityType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StorageService } from '../storage/storage.service.js';
+import { AuditService } from './audit.service.js';
+import { FollowersService } from './followers.service.js';
+import { NotificationsService } from './notifications.service.js';
+import { NotificationType } from '@prisma/client';
 
 export interface UploadedFileLike {
   originalname: string;
@@ -19,6 +23,9 @@ export class AttachmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly audit: AuditService,
+    private readonly followers: FollowersService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async upload(actorId: string, file: UploadedFileLike) {
@@ -63,8 +70,12 @@ export class AttachmentsService {
     id: string,
     entityType: EntityType,
     entityId: string,
+    actorId: string,
   ) {
-    const a = await this.prisma.attachment.findUnique({ where: { id } });
+    const a = await this.prisma.attachment.findUnique({
+      where: { id },
+      include: { uploadedBy: { select: { id: true, fullName: true } } },
+    });
     if (!a) throw new NotFoundException('Attachment not found');
     if (
       a.entityId &&
@@ -74,10 +85,32 @@ export class AttachmentsService {
         'Attachment is already linked to another record',
       );
     }
-    return this.prisma.attachment.update({
+    const updated = await this.prisma.attachment.update({
       where: { id },
       data: { entityType, entityId },
     });
+
+    await this.audit.record({
+      entityType,
+      entityId,
+      action: 'ATTACHMENT_ADDED',
+      summary: `uploaded a file — ${a.originalFilename}`,
+      actorId,
+    });
+
+    const followerIds = await this.followers.followerIds(entityType, entityId);
+    await this.notifications.notifyMany(
+      followerIds.filter((fid) => fid !== actorId),
+      {
+        type: NotificationType.GENERAL,
+        title: 'New file added',
+        body: a.originalFilename,
+        entityType,
+        entityId,
+      },
+    );
+
+    return updated;
   }
 
   /** Link a caller's own still-unlinked attachments to an entity (used by comments). */
@@ -104,6 +137,15 @@ export class AttachmentsService {
     }
     await this.storage.remove(a.storageKey);
     await this.prisma.attachment.delete({ where: { id } });
+    if (a.entityType && a.entityId) {
+      await this.audit.record({
+        entityType: a.entityType,
+        entityId: a.entityId,
+        action: 'ATTACHMENT_REMOVED',
+        summary: `removed a file — ${a.originalFilename}`,
+        actorId,
+      });
+    }
     return { ok: true };
   }
 }

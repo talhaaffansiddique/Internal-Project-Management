@@ -583,10 +583,10 @@ table.grid tbody tr:hover { background: var(--surface-2); }
   display: flex; align-items: center; justify-content: center; gap: 8px;
   border: 1.5px dashed var(--border-strong); border-radius: 10px;
   padding: 18px 14px; text-align: center;
-  background: var(--surface-2); color: var(--text-muted); font-size: 13px;
+  background: var(--surface-2); color: var(--text); font-weight: 500; font-size: 13px;
   cursor: pointer; transition: border-color .15s, background .15s, color .15s;
 }
-.dropzone:hover { border-color: var(--primary); color: var(--text); }
+.dropzone:hover { border-color: var(--primary); color: var(--primary-strong); }
 .dropzone.dragging {
   border-color: var(--primary); background: var(--primary-soft); color: var(--primary-strong);
 }

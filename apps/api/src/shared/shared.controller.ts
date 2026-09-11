@@ -106,11 +106,13 @@ export class SharedEntityController {
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
     @Body() dto: LinkAttachmentDto,
+    @CurrentUser('id') userId: string,
   ) {
     return this.attachments.linkToEntity(
       dto.attachmentId,
       parseEntityType(entityType),
       entityId,
+      userId,
     );
   }
 
