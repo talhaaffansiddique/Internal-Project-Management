@@ -22,10 +22,10 @@ import {
 export class UsersController {
   constructor(private readonly users: UsersService) {}
 
-  /** Lightweight picker for @mention / assignee fields — any authenticated user. */
+  /** Lightweight picker for @mention / assignee fields — any authenticated user. Pass `role` to filter to users holding that role key. */
   @Get('lookup')
-  lookup(@Query('q') q?: string) {
-    return this.users.lookup(q ?? '');
+  lookup(@Query('q') q?: string, @Query('role') role?: string) {
+    return this.users.lookup(q ?? '', role);
   }
 
   @Get()

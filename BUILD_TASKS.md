@@ -282,5 +282,49 @@ Each step restates scope + success criteria before code is written.
   items); verified via API (created a 3-item mixed request) and in-browser
   (list shows "router +2 more / Mixed", detail shows all 3 rows, New-request
   modal adds/removes item rows correctly).
+- [x] **CR-6 — Assigned RFQ ownership, post-RFQ Director approval, and Director standing override**
+  Schema: `ProcurementRequest.assignedToId` (nullable, FK to `users`) — the
+  Purchasing/Finance user the creator picked to gather RFQs; nullable so
+  older/unassigned requests fall back to "any Purchasing/Finance user."
+  New `AWAITING_FINAL_APPROVAL` status between WITH_PURCHASING and ORDERED
+  (migration `20260911130500_procurement_rfq_workflow`).
+  API (`procurement.service.ts`):
+  - `create` accepts an optional `assignedToId`, validated to hold the
+    PURCHASING_FINANCE role.
+  - A new `assertPurchasingActor` gate replaces the old role-only check for
+    quotations/send-for-approval/mark-delivered: if a request has an
+    assigned owner, only they (or an admin) may act; unassigned requests
+    keep the old "any Purchasing/Finance user" behavior.
+  - `sendForApproval` (WITH_PURCHASING → AWAITING_FINAL_APPROVAL, requires a
+    selected quotation) replaces the old direct "mark order placed" — the
+    RFQ owner explicitly hands it to the Director instead.
+  - `finalApproval` (Director, AWAITING_FINAL_APPROVAL → ORDERED on approve
+    / REJECTED on reject) is the new gate before every order.
+  - `stopPurchase` and `reassign` are the Director's standing override,
+    available whenever a request is WITH_PURCHASING /
+    AWAITING_FINAL_APPROVAL / ORDERED — Stop cancels it (REJECTED, mandatory
+    comment); Reassign swaps the RFQ owner (comment optional). Both notify
+    the requester + old/new assignee and are fully audited.
+  - `/users/lookup` now takes an optional `role` filter (used to populate
+    the Purchasing/Finance pickers).
+  - Editing (requester can edit items/reason) is unchanged — still limited
+    to the SUBMITTED stage, per your call to keep current behavior there.
+  Web: New-request modal has an "Assign RFQ to" picker (optional, defaults
+  to "any Purchasing/Finance user"); detail header shows the assignee;
+  WITH_PURCHASING's action bar is now "Send for director approval"; a new
+  AWAITING_FINAL_APPROVAL approve/reject bar for Directors; a "Director
+  oversight" panel (Stop purchase / Re-assign RFQ owner) shown to Directors
+  whenever the request is at a stoppable stage.
+  *Done:* `npm run build` clean for both apps; migration applied + demo data
+  reseeded (one request now sits at AWAITING_FINAL_APPROVAL with an assigned
+  owner, to exercise the new stage). Verified the full chain via API: create
+  with assignedToId → non-assignee blocked (403) from adding quotations →
+  assignee adds + selects a quotation → send-for-approval blocked (400)
+  before selecting, succeeds after → Director final-approval → ORDERED →
+  Director reassign → Director stop (→ REJECTED, non-Director blocked 403)
+  → confirmed every step in the audit log. Verified in-browser on the
+  seeded forklift request: Final-approval bar and Director-oversight panel
+  render correctly, Re-assign dropdown populates from the Purchasing/Finance
+  role.
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

@@ -71,6 +71,7 @@ enum ProcurementStatus {
   SUBMITTED
   AWAITING_DIRECTOR
   WITH_PURCHASING
+  AWAITING_FINAL_APPROVAL
   ORDERED
   DELIVERED
   REJECTED
@@ -140,6 +141,7 @@ model User {
   trainingsCreated    Training[]       @relation("TrainingCreator")
   trainingParticipations TrainingParticipant[]
   procurementRequested ProcurementRequest[] @relation("ProcurementRequester")
+  procurementAssigned  ProcurementRequest[] @relation("ProcurementAssignee")
   procurementQuotationsAdded ProcurementQuotation[]
 
   @@index([primaryDepartmentId])
@@ -637,17 +639,23 @@ model ProcurementRequest {
   businessReason String
   requesterId    String
   departmentId   String?
+  /// Purchasing/Finance user the creator assigned to gather quotations for
+  /// this request. Null falls back to "any Purchasing/Finance user" (legacy
+  /// behavior). The Director can re-assign this later via the reassign action.
+  assignedToId   String?
   statusKey      ProcurementStatus @default(SUBMITTED)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
   requester  User                   @relation("ProcurementRequester", fields: [requesterId], references: [id])
+  assignedTo User?                  @relation("ProcurementAssignee", fields: [assignedToId], references: [id])
   department Department?            @relation(fields: [departmentId], references: [id])
   items      ProcurementItem[]
   quotations ProcurementQuotation[]
 
   @@index([statusKey])
   @@index([requesterId])
+  @@index([assignedToId])
   @@map("procurement_requests")
 }
 

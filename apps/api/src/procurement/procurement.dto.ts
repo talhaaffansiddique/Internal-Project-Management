@@ -35,6 +35,8 @@ export class CreateProcurementDto {
   items!: ProcurementItemDto[];
   @IsString() @MinLength(3) businessReason!: string;
   @IsOptional() @IsUUID() departmentId?: string;
+  /** Purchasing/Finance user to gather RFQs for this request. Optional — falls back to "any Purchasing/Finance user". */
+  @IsOptional() @IsUUID() assignedToId?: string;
 }
 
 export class UpdateProcurementDto {
@@ -60,8 +62,27 @@ export class DirectorDecisionDto {
 }
 
 export class PurchaseStatusDto {
-  @IsIn(['ORDERED', 'DELIVERED'])
-  statusKey!: 'ORDERED' | 'DELIVERED';
+  @IsIn(['DELIVERED'])
+  statusKey!: 'DELIVERED';
+}
+
+export class SendForApprovalDto {
+  @IsOptional() @IsString() comment?: string;
+}
+
+export class FinalApprovalDto {
+  @IsIn(['approve', 'reject'])
+  decision!: 'approve' | 'reject';
+  @IsOptional() @IsString() comment?: string;
+}
+
+export class StopPurchaseDto {
+  @IsString() @MinLength(3) comment!: string;
+}
+
+export class ReassignDto {
+  @IsUUID() assignedToId!: string;
+  @IsOptional() @IsString() comment?: string;
 }
 
 export class CreateQuotationDto {

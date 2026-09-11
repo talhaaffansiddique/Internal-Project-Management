@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
 import { useAuth } from '../../auth'
-import type { ProcurementRequest } from '../../types'
+import type { ProcurementRequest, UserLookup } from '../../types'
 import { ErrorText } from '../../ui'
 import { Chatter, EntityAttachments, EntityAudit } from '../../components/entity-panels'
 
@@ -9,11 +9,22 @@ const STATUS_LABEL: Record<string, string> = {
   SUBMITTED: 'Awaiting Supervisor',
   AWAITING_DIRECTOR: 'Awaiting Director',
   WITH_PURCHASING: 'With Purchasing',
+  AWAITING_FINAL_APPROVAL: 'Awaiting Final Approval',
   ORDERED: 'Ordered',
   DELIVERED: 'Delivered',
   REJECTED: 'Rejected',
 }
 const prNo = (n: number) => `PR-${String(n).padStart(4, '0')}`
+const textAreaStyle = {
+  border: '1px solid var(--border-strong)',
+  borderRadius: 8,
+  padding: 8,
+  font: 'inherit',
+  fontSize: 13,
+  background: 'var(--surface)',
+  color: 'var(--text)',
+} as const
+const STOPPABLE_STAGES = ['WITH_PURCHASING', 'AWAITING_FINAL_APPROVAL', 'ORDERED']
 
 type Tab = 'details' | 'discussion' | 'files' | 'history'
 
@@ -28,7 +39,7 @@ export default function ProcurementDetail({
   const isAdmin = !!user?.roles.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN')
   const isSupervisor = isAdmin || !!user?.roles.includes('SUPERVISOR')
   const isDirector = isAdmin || !!user?.roles.includes('DIRECTOR')
-  const isPurchasing = isAdmin || !!user?.roles.includes('PURCHASING_FINANCE')
+  const isPurchasingRole = isAdmin || !!user?.roles.includes('PURCHASING_FINANCE')
 
   const [r, setR] = useState<ProcurementRequest | null>(null)
   const [tab, setTab] = useState<Tab>('details')
@@ -38,6 +49,18 @@ export default function ProcurementDetail({
   const [amount, setAmount] = useState('')
   const [terms, setTerms] = useState('')
   const [delivery, setDelivery] = useState('')
+  const [purchasingUsers, setPurchasingUsers] = useState<UserLookup[]>([])
+  const [showStop, setShowStop] = useState(false)
+  const [showReassign, setShowReassign] = useState(false)
+  const [stopComment, setStopComment] = useState('')
+  const [reassignTo, setReassignTo] = useState('')
+  const [reassignComment, setReassignComment] = useState('')
+
+  // Only the assigned RFQ owner (if one is set) may act on Purchasing-stage
+  // actions; otherwise it's open to any Purchasing/Finance user.
+  const isPurchasing = r
+    ? isAdmin || (r.assignedTo ? r.assignedTo.id === user?.id : isPurchasingRole)
+    : isPurchasingRole
 
   async function load() {
     try {
@@ -50,6 +73,12 @@ export default function ProcurementDetail({
     void load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+  useEffect(() => {
+    if (isDirector) {
+      void api<UserLookup[]>('/users/lookup?role=PURCHASING_FINANCE').then(setPurchasingUsers)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirector])
 
   async function act(path: string, body: Record<string, unknown>) {
     setError(null)
@@ -93,6 +122,39 @@ export default function ProcurementDetail({
     void load()
   }
 
+  async function stopPurchase() {
+    if (!stopComment.trim()) return
+    setError(null)
+    try {
+      await api(`/procurement-requests/${id}/stop`, {
+        method: 'POST',
+        body: JSON.stringify({ comment: stopComment }),
+      })
+      setStopComment('')
+      setShowStop(false)
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not stop the purchase')
+    }
+  }
+
+  async function reassign() {
+    if (!reassignTo) return
+    setError(null)
+    try {
+      await api(`/procurement-requests/${id}/reassign`, {
+        method: 'POST',
+        body: JSON.stringify({ assignedToId: reassignTo, comment: reassignComment || undefined }),
+      })
+      setReassignTo('')
+      setReassignComment('')
+      setShowReassign(false)
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not re-assign the request')
+    }
+  }
+
   if (error && !r) {
     return (
       <div>
@@ -124,6 +186,7 @@ export default function ProcurementDetail({
                 : 'Service'}{' '}
             · requested by {r.requester.fullName}
             {r.department && ` · ${r.department.name}`}
+            {r.assignedTo && ` · RFQ assigned to ${r.assignedTo.fullName}`}
           </p>
         </div>
       </div>
@@ -140,7 +203,7 @@ export default function ProcurementDetail({
             placeholder="Comment (optional)"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            style={{ border: '1px solid var(--border-strong)', borderRadius: 8, padding: 8, font: 'inherit', fontSize: 13, background: 'var(--surface)', color: 'var(--text)' }}
+            style={textAreaStyle}
           />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn primary" onClick={() => act('supervisor-decision', { decision: 'approve_to_purchasing', comment })}>
@@ -164,7 +227,7 @@ export default function ProcurementDetail({
             placeholder="Comment (optional)"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            style={{ border: '1px solid var(--border-strong)', borderRadius: 8, padding: 8, font: 'inherit', fontSize: 13, background: 'var(--surface)', color: 'var(--text)' }}
+            style={textAreaStyle}
           />
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn primary" onClick={() => act('director-decision', { decision: 'approve', comment })}>
@@ -181,13 +244,35 @@ export default function ProcurementDetail({
         <div className="rsvp-bar">
           <button
             className="btn primary"
-            onClick={() => act('purchase-status', { statusKey: 'ORDERED' })}
+            onClick={() => act('send-for-approval', { comment: comment || undefined })}
           >
-            Mark order placed
+            Send for director approval
           </button>
           <span className="muted small">requires a selected quotation</span>
         </div>
       )}
+
+      {r.statusKey === 'AWAITING_FINAL_APPROVAL' && isDirector && (
+        <div className="rsvp-bar" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+          <b>Final approval — order the selected quotation?</b>
+          <textarea
+            rows={2}
+            placeholder="Comment (optional)"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            style={textAreaStyle}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn primary" onClick={() => act('final-approval', { decision: 'approve', comment })}>
+              Approve & place order
+            </button>
+            <button className="btn danger" onClick={() => act('final-approval', { decision: 'reject', comment })}>
+              Reject
+            </button>
+          </div>
+        </div>
+      )}
+
       {r.statusKey === 'ORDERED' && isPurchasing && (
         <div className="rsvp-bar">
           <button
@@ -196,6 +281,54 @@ export default function ProcurementDetail({
           >
             Mark delivered
           </button>
+        </div>
+      )}
+
+      {isDirector && STOPPABLE_STAGES.includes(r.statusKey) && (
+        <div className="rsvp-bar" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+          <b>Director oversight</b>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn danger" onClick={() => { setShowStop((v) => !v); setShowReassign(false) }}>
+              Stop purchase
+            </button>
+            <button className="btn" onClick={() => { setShowReassign((v) => !v); setShowStop(false) }}>
+              Re-assign RFQ owner
+            </button>
+          </div>
+          {showStop && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+              <textarea
+                rows={2}
+                placeholder="Reason for stopping this purchase (required)"
+                value={stopComment}
+                onChange={(e) => setStopComment(e.target.value)}
+                style={textAreaStyle}
+              />
+              <button className="btn danger" onClick={stopPurchase} disabled={!stopComment.trim()} style={{ alignSelf: 'flex-start' }}>
+                Confirm stop
+              </button>
+            </div>
+          )}
+          {showReassign && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+              <select value={reassignTo} onChange={(e) => setReassignTo(e.target.value)}>
+                <option value="">— Choose new RFQ owner —</option>
+                {purchasingUsers.map((u) => (
+                  <option key={u.id} value={u.id}>{u.fullName}</option>
+                ))}
+              </select>
+              <textarea
+                rows={2}
+                placeholder="Comment (optional)"
+                value={reassignComment}
+                onChange={(e) => setReassignComment(e.target.value)}
+                style={textAreaStyle}
+              />
+              <button className="btn primary" onClick={reassign} disabled={!reassignTo} style={{ alignSelf: 'flex-start' }}>
+                Confirm re-assignment
+              </button>
+            </div>
+          )}
         </div>
       )}
       <ErrorText>{error}</ErrorText>

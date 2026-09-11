@@ -17,7 +17,11 @@ import { NotificationsService } from '../shared/notifications.service.js';
 import {
   CreateProcurementDto,
   CreateQuotationDto,
+  FinalApprovalDto,
   ListProcurementQuery,
+  ReassignDto,
+  SendForApprovalDto,
+  StopPurchaseDto,
   UpdateProcurementDto,
   UpdateQuotationDto,
 } from './procurement.dto.js';
@@ -29,11 +33,20 @@ const STAGE_ROLE: Record<string, string> = {
   SUBMITTED: 'SUPERVISOR',
   AWAITING_DIRECTOR: 'DIRECTOR',
   WITH_PURCHASING: 'PURCHASING_FINANCE',
+  AWAITING_FINAL_APPROVAL: 'DIRECTOR',
   ORDERED: 'PURCHASING_FINANCE',
 };
 
+/** Stages at which the Director retains a standing stop/re-assign override. */
+const STOPPABLE_STAGES: ProcurementStatus[] = [
+  ProcurementStatus.WITH_PURCHASING,
+  ProcurementStatus.AWAITING_FINAL_APPROVAL,
+  ProcurementStatus.ORDERED,
+];
+
 const DETAIL_INCLUDE = {
   requester: { select: { id: true, fullName: true, email: true } },
+  assignedTo: { select: { id: true, fullName: true, email: true } },
   department: { select: { id: true, name: true } },
   items: { orderBy: { createdAt: 'asc' } },
   quotations: {
@@ -70,12 +83,17 @@ export class ProcurementService {
   }
 
   private canView(
-    req: { requesterId: string; statusKey: ProcurementStatus },
+    req: {
+      requesterId: string;
+      assignedToId: string | null;
+      statusKey: ProcurementStatus;
+    },
     userId: string,
     roles: string[],
   ) {
     if (this.isPrivileged(roles)) return true;
     if (req.requesterId === userId) return true;
+    if (req.assignedToId === userId) return true;
     const stageRole = STAGE_ROLE[req.statusKey];
     return !!stageRole && roles.includes(stageRole);
   }
@@ -96,6 +114,48 @@ export class ProcurementService {
     }
   }
 
+  /**
+   * Gate for the Purchasing/Finance-stage actions (add/select quotations,
+   * send for approval, mark delivered). If the request has an assigned RFQ
+   * owner, only they (or a privileged admin) may act; otherwise falls back
+   * to "any Purchasing/Finance user" (legacy / unassigned requests).
+   */
+  private assertPurchasingActor(
+    req: { statusKey: ProcurementStatus; assignedToId: string | null },
+    expectedStatus: ProcurementStatus,
+    userId: string,
+    roles: string[],
+  ) {
+    if (req.statusKey !== expectedStatus) {
+      throw new BadRequestException(
+        `This request is not at the "${expectedStatus}" stage`,
+      );
+    }
+    if (this.isPrivileged(roles)) return;
+    if (req.assignedToId) {
+      if (req.assignedToId !== userId) {
+        throw new ForbiddenException(
+          'Only the Purchasing/Finance user assigned to this request can do this',
+        );
+      }
+      return;
+    }
+    if (!roles.includes('PURCHASING_FINANCE')) {
+      throw new ForbiddenException('Requires the PURCHASING_FINANCE role');
+    }
+  }
+
+  private async assertPurchasingFinanceUser(userId: string) {
+    const hasRole = await this.prisma.userRole.findFirst({
+      where: { userId, role: { key: 'PURCHASING_FINANCE' } },
+    });
+    if (!hasRole) {
+      throw new BadRequestException(
+        'The assigned user must have the Purchasing/Finance role',
+      );
+    }
+  }
+
   private async load(id: string) {
     const r = await this.prisma.procurementRequest.findUnique({
       where: { id },
@@ -113,6 +173,7 @@ export class ProcurementService {
         .map(([status]) => status as ProcurementStatus);
       where.OR = [
         { requesterId: userId },
+        { assignedToId: userId },
         ...(visibleStatuses.length
           ? [{ statusKey: { in: visibleStatuses } }]
           : []),
@@ -140,6 +201,9 @@ export class ProcurementService {
   }
 
   async create(userId: string, dto: CreateProcurementDto) {
+    if (dto.assignedToId) {
+      await this.assertPurchasingFinanceUser(dto.assignedToId);
+    }
     const requester = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -148,6 +212,7 @@ export class ProcurementService {
         businessReason: dto.businessReason.trim(),
         requesterId: userId,
         departmentId: dto.departmentId ?? requester?.primaryDepartmentId ?? null,
+        assignedToId: dto.assignedToId ?? null,
         statusKey: ProcurementStatus.SUBMITTED,
         items: {
           create: dto.items.map((i) => ({
@@ -318,6 +383,14 @@ export class ProcurementService {
         entityType: EntityType.PROCUREMENT_REQUEST,
         entityId: req.id,
       });
+    } else if (stage === ProcurementStatus.AWAITING_FINAL_APPROVAL) {
+      const ids = await this.userIdsWithRole('DIRECTOR');
+      await this.notifications.notifyMany(ids, {
+        type: NotificationType.APPROVAL_REQUEST,
+        title: `Final approval needed (quotation selected): ${summary}`,
+        entityType: EntityType.PROCUREMENT_REQUEST,
+        entityId: req.id,
+      });
     }
     if (requesterId !== actorId) {
       await this.notifications.notify({
@@ -334,24 +407,10 @@ export class ProcurementService {
     id: string,
     userId: string,
     roles: string[],
-    statusKey: 'ORDERED' | 'DELIVERED',
+    statusKey: 'DELIVERED',
   ) {
     const r = await this.load(id);
-    const expected =
-      statusKey === 'ORDERED'
-        ? ProcurementStatus.WITH_PURCHASING
-        : ProcurementStatus.ORDERED;
-    this.assertStageActor(r, expected, 'PURCHASING_FINANCE', roles);
-    if (statusKey === 'ORDERED') {
-      const hasSelected = r.quotations.some(
-        (q) => q.status === QuotationStatus.SELECTED,
-      );
-      if (!hasSelected) {
-        throw new BadRequestException(
-          'Select a quotation before marking the order placed',
-        );
-      }
-    }
+    this.assertPurchasingActor(r, ProcurementStatus.ORDERED, userId, roles);
     const updated = await this.prisma.procurementRequest.update({
       where: { id },
       data: { statusKey: statusKey as ProcurementStatus },
@@ -385,12 +444,7 @@ export class ProcurementService {
     dto: CreateQuotationDto,
   ) {
     const r = await this.load(id);
-    this.assertStageActor(
-      r,
-      ProcurementStatus.WITH_PURCHASING,
-      'PURCHASING_FINANCE',
-      roles,
-    );
+    this.assertPurchasingActor(r, ProcurementStatus.WITH_PURCHASING, userId, roles);
     await this.prisma.procurementQuotation.create({
       data: {
         requestId: id,
@@ -426,10 +480,10 @@ export class ProcurementService {
       include: { request: true },
     });
     if (!q) throw new NotFoundException('Quotation not found');
-    this.assertStageActor(
+    this.assertPurchasingActor(
       q.request,
       ProcurementStatus.WITH_PURCHASING,
-      'PURCHASING_FINANCE',
+      userId,
       roles,
     );
     await this.prisma.procurementQuotation.update({
@@ -453,10 +507,10 @@ export class ProcurementService {
       include: { request: true },
     });
     if (!q) throw new NotFoundException('Quotation not found');
-    this.assertStageActor(
+    this.assertPurchasingActor(
       q.request,
       ProcurementStatus.WITH_PURCHASING,
-      'PURCHASING_FINANCE',
+      userId,
       roles,
     );
     await this.prisma.$transaction([
@@ -477,6 +531,193 @@ export class ProcurementService {
       actorId: userId,
     });
     return this.load(q.requestId);
+  }
+
+  /** Assigned RFQ owner (or admin) is done gathering quotes — sends the selected one to the Director for final approval. */
+  async sendForApproval(
+    id: string,
+    userId: string,
+    roles: string[],
+    dto: SendForApprovalDto,
+  ) {
+    const r = await this.load(id);
+    this.assertPurchasingActor(r, ProcurementStatus.WITH_PURCHASING, userId, roles);
+    const hasSelected = r.quotations.some(
+      (q) => q.status === QuotationStatus.SELECTED,
+    );
+    if (!hasSelected) {
+      throw new BadRequestException(
+        'Select a quotation before sending for approval',
+      );
+    }
+    const updated = await this.prisma.procurementRequest.update({
+      where: { id },
+      data: { statusKey: ProcurementStatus.AWAITING_FINAL_APPROVAL },
+      include: DETAIL_INCLUDE,
+    });
+    await this.audit.record({
+      entityType: EntityType.PROCUREMENT_REQUEST,
+      entityId: id,
+      action: 'SENT_FOR_APPROVAL',
+      summary: `sent the selected quotation for director approval${dto.comment ? ` — ${dto.comment}` : ''}`,
+      actorId: userId,
+      oldValue: r.statusKey,
+      newValue: updated.statusKey,
+      meta: dto.comment ? { comment: dto.comment } : undefined,
+    });
+    await this.notifyStage(
+      updated,
+      userId,
+      ProcurementStatus.AWAITING_FINAL_APPROVAL,
+      r.requesterId,
+    );
+    return updated;
+  }
+
+  /** Director's first-time review of the selected quotation: approve places the order, reject cancels the request. */
+  async finalApproval(
+    id: string,
+    userId: string,
+    roles: string[],
+    dto: FinalApprovalDto,
+  ) {
+    const r = await this.load(id);
+    this.assertStageActor(
+      r,
+      ProcurementStatus.AWAITING_FINAL_APPROVAL,
+      'DIRECTOR',
+      roles,
+    );
+    const next =
+      dto.decision === 'approve'
+        ? ProcurementStatus.ORDERED
+        : ProcurementStatus.REJECTED;
+    const updated = await this.prisma.procurementRequest.update({
+      where: { id },
+      data: { statusKey: next },
+      include: DETAIL_INCLUDE,
+    });
+    await this.audit.record({
+      entityType: EntityType.PROCUREMENT_REQUEST,
+      entityId: id,
+      action: 'FINAL_APPROVAL',
+      summary: `director final decision: ${dto.decision}${dto.comment ? ` — ${dto.comment}` : ''}`,
+      actorId: userId,
+      oldValue: r.statusKey,
+      newValue: next,
+      meta: dto.comment ? { comment: dto.comment } : undefined,
+    });
+    const summary = summarizeItems(r.items);
+    const recipients = [...new Set([r.requesterId, r.assignedToId])].filter(
+      (uid): uid is string => !!uid && uid !== userId,
+    );
+    await this.notifications.notifyMany(recipients, {
+      type: NotificationType.STATUS_CHANGE,
+      title:
+        dto.decision === 'approve'
+          ? `Order approved & placed: "${summary}"${dto.comment ? ` — ${dto.comment}` : ''}`
+          : `Purchase rejected: "${summary}"${dto.comment ? ` — ${dto.comment}` : ''}`,
+      entityType: EntityType.PROCUREMENT_REQUEST,
+      entityId: id,
+    });
+    return updated;
+  }
+
+  /**
+   * Director's standing override, available any time while the request is
+   * being purchased (quotes gathered, awaiting final approval, or already
+   * ordered) — cancels the purchase outright, with a mandatory comment.
+   */
+  async stopPurchase(
+    id: string,
+    userId: string,
+    roles: string[],
+    dto: StopPurchaseDto,
+  ) {
+    const r = await this.load(id);
+    if (!STOPPABLE_STAGES.includes(r.statusKey)) {
+      throw new BadRequestException(
+        'This request cannot be stopped at its current stage',
+      );
+    }
+    if (!this.isPrivileged(roles) && !roles.includes('DIRECTOR')) {
+      throw new ForbiddenException('Requires the DIRECTOR role');
+    }
+    const updated = await this.prisma.procurementRequest.update({
+      where: { id },
+      data: { statusKey: ProcurementStatus.REJECTED },
+      include: DETAIL_INCLUDE,
+    });
+    await this.audit.record({
+      entityType: EntityType.PROCUREMENT_REQUEST,
+      entityId: id,
+      action: 'STOPPED',
+      summary: `stopped the purchase — ${dto.comment}`,
+      actorId: userId,
+      oldValue: r.statusKey,
+      newValue: ProcurementStatus.REJECTED,
+      meta: { comment: dto.comment },
+    });
+    const summary = summarizeItems(r.items);
+    const recipients = [...new Set([r.requesterId, r.assignedToId])].filter(
+      (uid): uid is string => !!uid && uid !== userId,
+    );
+    await this.notifications.notifyMany(recipients, {
+      type: NotificationType.STATUS_CHANGE,
+      title: `Purchase stopped by the Director: "${summary}" — ${dto.comment}`,
+      entityType: EntityType.PROCUREMENT_REQUEST,
+      entityId: id,
+    });
+    return updated;
+  }
+
+  /**
+   * Director's standing override to swap who owns RFQ/purchasing for this
+   * request, available at the same stages as stopPurchase.
+   */
+  async reassign(
+    id: string,
+    userId: string,
+    roles: string[],
+    dto: ReassignDto,
+  ) {
+    const r = await this.load(id);
+    if (!STOPPABLE_STAGES.includes(r.statusKey)) {
+      throw new BadRequestException(
+        'This request cannot be re-assigned at its current stage',
+      );
+    }
+    if (!this.isPrivileged(roles) && !roles.includes('DIRECTOR')) {
+      throw new ForbiddenException('Requires the DIRECTOR role');
+    }
+    await this.assertPurchasingFinanceUser(dto.assignedToId);
+    const oldAssigneeId = r.assignedToId;
+    const updated = await this.prisma.procurementRequest.update({
+      where: { id },
+      data: { assignedToId: dto.assignedToId },
+      include: DETAIL_INCLUDE,
+    });
+    await this.audit.record({
+      entityType: EntityType.PROCUREMENT_REQUEST,
+      entityId: id,
+      action: 'REASSIGNED',
+      summary: `re-assigned the Purchasing/Finance owner${dto.comment ? ` — ${dto.comment}` : ''}`,
+      actorId: userId,
+      oldValue: oldAssigneeId,
+      newValue: dto.assignedToId,
+      meta: dto.comment ? { comment: dto.comment } : undefined,
+    });
+    const summary = summarizeItems(r.items);
+    const recipients = [
+      ...new Set([oldAssigneeId, dto.assignedToId, r.requesterId]),
+    ].filter((uid): uid is string => !!uid && uid !== userId);
+    await this.notifications.notifyMany(recipients, {
+      type: NotificationType.GENERAL,
+      title: `Purchasing owner changed for "${summary}"${dto.comment ? `: ${dto.comment}` : ''}`,
+      entityType: EntityType.PROCUREMENT_REQUEST,
+      entityId: id,
+    });
+    return updated;
   }
 
   async stats(userId: string, roles: string[]) {

@@ -211,6 +211,7 @@ export type ProcurementStatusValue =
   | 'SUBMITTED'
   | 'AWAITING_DIRECTOR'
   | 'WITH_PURCHASING'
+  | 'AWAITING_FINAL_APPROVAL'
   | 'ORDERED'
   | 'DELIVERED'
   | 'REJECTED'
@@ -244,6 +245,7 @@ export interface ProcurementRequest {
   statusKey: ProcurementStatusValue
   createdAt: string
   requester: { id: string; fullName: string; email: string }
+  assignedTo: { id: string; fullName: string; email: string } | null
   department: { id: string; name: string } | null
   items: ProcurementItem[]
   quotations: ProcurementQuotation[]

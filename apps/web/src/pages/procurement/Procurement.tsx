@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
-import type { ProcurementRequest } from '../../types'
+import type { ProcurementRequest, UserLookup } from '../../types'
 import { Modal, Field, ErrorText } from '../../ui'
 import ProcurementDetail from './ProcurementDetail'
 
@@ -8,6 +8,7 @@ const STATUS_LABEL: Record<string, string> = {
   SUBMITTED: 'Awaiting Supervisor',
   AWAITING_DIRECTOR: 'Awaiting Director',
   WITH_PURCHASING: 'With Purchasing',
+  AWAITING_FINAL_APPROVAL: 'Awaiting Final Approval',
   ORDERED: 'Ordered',
   DELIVERED: 'Delivered',
   REJECTED: 'Rejected',
@@ -153,8 +154,14 @@ function NewProcurementModal({
 }) {
   const [items, setItems] = useState<DraftItem[]>([emptyItem()])
   const [businessReason, setBusinessReason] = useState('')
+  const [assignedToId, setAssignedToId] = useState('')
+  const [purchasingUsers, setPurchasingUsers] = useState<UserLookup[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    void api<UserLookup[]>('/users/lookup?role=PURCHASING_FINANCE').then(setPurchasingUsers)
+  }, [])
 
   function updateItem(i: number, patch: Partial<DraftItem>) {
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
@@ -181,6 +188,7 @@ function NewProcurementModal({
             quantity: it.quantity.trim() || undefined,
           })),
           businessReason,
+          assignedToId: assignedToId || undefined,
         }),
       })
       onCreated(created.id)
@@ -260,6 +268,14 @@ function NewProcurementModal({
       </Field>
       <Field label="Business reason">
         <textarea rows={2} value={businessReason} onChange={(e) => setBusinessReason(e.target.value)} />
+      </Field>
+      <Field label="Assign RFQ to" hint="Who should gather vendor quotations. Optional — leaves it open to any Purchasing/Finance user.">
+        <select value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}>
+          <option value="">— Any Purchasing/Finance user —</option>
+          {purchasingUsers.map((u) => (
+            <option key={u.id} value={u.id}>{u.fullName}</option>
+          ))}
+        </select>
       </Field>
       <ErrorText>{error}</ErrorText>
     </Modal>

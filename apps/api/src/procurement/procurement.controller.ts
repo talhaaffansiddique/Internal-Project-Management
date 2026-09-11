@@ -17,8 +17,12 @@ import {
   CreateProcurementDto,
   CreateQuotationDto,
   DirectorDecisionDto,
+  FinalApprovalDto,
   ListProcurementQuery,
   PurchaseStatusDto,
+  ReassignDto,
+  SendForApprovalDto,
+  StopPurchaseDto,
   SupervisorDecisionDto,
   UpdateProcurementDto,
   UpdateQuotationDto,
@@ -156,5 +160,49 @@ export class ProcurementController {
     @CurrentUserRoles() roles: string[],
   ) {
     return this.procurement.selectQuotation(id, userId, roles);
+  }
+
+  @Post('procurement-requests/:id/send-for-approval')
+  @Roles()
+  sendForApproval(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoles() roles: string[],
+    @Body() dto: SendForApprovalDto,
+  ) {
+    return this.procurement.sendForApproval(id, userId, roles, dto);
+  }
+
+  @Post('procurement-requests/:id/final-approval')
+  @Roles()
+  finalApproval(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoles() roles: string[],
+    @Body() dto: FinalApprovalDto,
+  ) {
+    return this.procurement.finalApproval(id, userId, roles, dto);
+  }
+
+  @Post('procurement-requests/:id/stop')
+  @Roles()
+  stopPurchase(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoles() roles: string[],
+    @Body() dto: StopPurchaseDto,
+  ) {
+    return this.procurement.stopPurchase(id, userId, roles, dto);
+  }
+
+  @Post('procurement-requests/:id/reassign')
+  @Roles()
+  reassign(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoles() roles: string[],
+    @Body() dto: ReassignDto,
+  ) {
+    return this.procurement.reassign(id, userId, roles, dto);
   }
 }

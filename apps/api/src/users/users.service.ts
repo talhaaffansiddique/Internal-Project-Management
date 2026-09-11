@@ -69,16 +69,19 @@ export class UsersService {
     return this.view(user);
   }
 
-  async lookup(q: string) {
+  async lookup(q: string, role?: string) {
     return this.prisma.user.findMany({
-      where: q
-        ? {
-            OR: [
-              { fullName: { contains: q, mode: 'insensitive' } },
-              { email: { contains: q, mode: 'insensitive' } },
-            ],
-          }
-        : {},
+      where: {
+        ...(q
+          ? {
+              OR: [
+                { fullName: { contains: q, mode: 'insensitive' } },
+                { email: { contains: q, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+        ...(role ? { roles: { some: { role: { key: role } } } } : {}),
+      },
       take: 20,
       orderBy: { fullName: 'asc' },
       select: { id: true, fullName: true, email: true },

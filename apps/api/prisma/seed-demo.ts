@@ -680,7 +680,16 @@ async function main() {
     reason: string;
     requester: string;
     dept: string;
-    status: 'SUBMITTED' | 'AWAITING_DIRECTOR' | 'WITH_PURCHASING' | 'ORDERED' | 'DELIVERED' | 'REJECTED';
+    status:
+      | 'SUBMITTED'
+      | 'AWAITING_DIRECTOR'
+      | 'WITH_PURCHASING'
+      | 'AWAITING_FINAL_APPROVAL'
+      | 'ORDERED'
+      | 'DELIVERED'
+      | 'REJECTED';
+    /** Purchasing/Finance user the creator assigned to gather RFQs — the new per-request RFQ owner. */
+    assignee?: string;
     quotations?: Array<{
       vendor: string;
       amount: number;
@@ -715,9 +724,23 @@ async function main() {
       requester: 'lena.m',
       dept: 'Sales',
       status: 'WITH_PURCHASING',
+      assignee: 'priya.n',
       quotations: [
         { vendor: 'PrintWorks', amount: 2100, terms: '50% advance', delivery: '2 weeks', selected: true },
         { vendor: 'QuickPrint Co.', amount: 2450, terms: 'Net 15', delivery: '1 week' },
+      ],
+    },
+    {
+      // Demonstrates the new post-RFQ Director approval gate.
+      items: [{ type: 'PRODUCT', item: 'Warehouse forklift replacement', quantity: '1' }],
+      reason: 'Existing forklift failed inspection',
+      requester: 'omar.d',
+      dept: 'Warehouse',
+      status: 'AWAITING_FINAL_APPROVAL',
+      assignee: 'priya.n',
+      quotations: [
+        { vendor: 'Heavy Equip Co.', amount: 18500, terms: '30% advance', delivery: '4 weeks', selected: true },
+        { vendor: 'Industrial Movers', amount: 21000, terms: 'Net 30', delivery: '6 weeks' },
       ],
     },
     {
@@ -726,6 +749,7 @@ async function main() {
       requester: 'nadia.f',
       dept: 'HR',
       status: 'DELIVERED',
+      assignee: 'priya.n',
       quotations: [
         { vendor: 'OfficePlus', amount: 1800, terms: 'Net 30', delivery: '3 weeks', selected: true },
         { vendor: 'ErgoSupply', amount: 2100, terms: 'Net 15', delivery: '1 week' },
@@ -740,6 +764,7 @@ async function main() {
         businessReason: p.reason,
         requesterId: userId[p.requester],
         departmentId: deptIdByName.get(p.dept) ?? null,
+        assignedToId: p.assignee ? userId[p.assignee] : null,
         statusKey: p.status,
         items: {
           create: p.items.map((i) => ({
