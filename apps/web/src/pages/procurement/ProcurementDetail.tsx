@@ -110,11 +110,19 @@ export default function ProcurementDetail({
       <div className="page-head" style={{ marginTop: 14 }}>
         <div>
           <h1>
-            <span className="muted">{prNo(r.number)}</span> {r.itemDescription}
+            <span className="muted">{prNo(r.number)}</span>{' '}
+            {r.items[0]?.description ?? '—'}
+            {r.items.length > 1 && (
+              <span className="muted small"> +{r.items.length - 1} more</span>
+            )}
           </h1>
           <p className="muted small">
-            {r.type === 'PRODUCT' ? 'Product' : 'Service'} · requested by{' '}
-            {r.requester.fullName}
+            {[...new Set(r.items.map((i) => i.type))].length > 1
+              ? 'Mixed'
+              : r.items[0]?.type === 'PRODUCT'
+                ? 'Product'
+                : 'Service'}{' '}
+            · requested by {r.requester.fullName}
             {r.department && ` · ${r.department.name}`}
           </p>
         </div>
@@ -207,9 +215,28 @@ export default function ProcurementDetail({
       {tab === 'details' && (
         <div className="detail-grid" style={{ marginTop: 14 }}>
           <div className="card">
-            <div className="kv">
-              <span>Quantity</span>
-              <b>{r.quantity ?? <span className="muted">—</span>}</b>
+            <h3>Items / services</h3>
+            <table className="grid">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Description</th>
+                  <th>Qty</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.items.map((it) => (
+                  <tr key={it.id}>
+                    <td className="muted small">
+                      {it.type === 'PRODUCT' ? 'Product' : 'Service'}
+                    </td>
+                    <td>{it.description}</td>
+                    <td className="muted small">{it.quantity ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="kv" style={{ marginTop: 12 }}>
               <span>Business reason</span>
               <b style={{ fontWeight: 400 }}>{r.businessReason}</b>
               <span>Created</span>

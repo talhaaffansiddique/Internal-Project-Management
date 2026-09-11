@@ -90,21 +90,36 @@ export default function Procurement() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} onClick={() => setOpenId(r.id)}>
-                <td><b>{prNo(r.number)}</b></td>
-                <td>{r.itemDescription}</td>
-                <td>{r.type === 'PRODUCT' ? 'Product' : 'Service'}</td>
-                <td>{r.requester.fullName}</td>
-                <td className="muted small">{r.department?.name ?? '—'}</td>
-                <td className="muted small">
-                  {new Date(r.createdAt).toLocaleDateString()}
-                </td>
-                <td>
-                  <span className="badge warn">{STATUS_LABEL[r.statusKey]}</span>
-                </td>
-              </tr>
-            ))}
+            {rows.map((r) => {
+              const [first, ...rest] = r.items
+              const types = [...new Set(r.items.map((i) => i.type))]
+              return (
+                <tr key={r.id} onClick={() => setOpenId(r.id)}>
+                  <td><b>{prNo(r.number)}</b></td>
+                  <td>
+                    {first?.description ?? '—'}
+                    {rest.length > 0 && (
+                      <span className="muted small"> +{rest.length} more</span>
+                    )}
+                  </td>
+                  <td>
+                    {types.length > 1
+                      ? 'Mixed'
+                      : types[0] === 'PRODUCT'
+                        ? 'Product'
+                        : 'Service'}
+                  </td>
+                  <td>{r.requester.fullName}</td>
+                  <td className="muted small">{r.department?.name ?? '—'}</td>
+                  <td className="muted small">
+                    {new Date(r.createdAt).toLocaleDateString()}
+                  </td>
+                  <td>
+                    <span className="badge warn">{STATUS_LABEL[r.statusKey]}</span>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       )}
@@ -122,6 +137,13 @@ export default function Procurement() {
   )
 }
 
+interface DraftItem {
+  type: 'PRODUCT' | 'SERVICE'
+  description: string
+  quantity: string
+}
+const emptyItem = (): DraftItem => ({ type: 'PRODUCT', description: '', quantity: '' })
+
 function NewProcurementModal({
   onClose,
   onCreated,
@@ -129,12 +151,22 @@ function NewProcurementModal({
   onClose: () => void
   onCreated: (id: string) => void
 }) {
-  const [type, setType] = useState<'PRODUCT' | 'SERVICE'>('PRODUCT')
-  const [itemDescription, setItemDescription] = useState('')
+  const [items, setItems] = useState<DraftItem[]>([emptyItem()])
   const [businessReason, setBusinessReason] = useState('')
-  const [quantity, setQuantity] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  function updateItem(i: number, patch: Partial<DraftItem>) {
+    setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
+  }
+  function addItem() {
+    setItems((prev) => [...prev, emptyItem()])
+  }
+  function removeItem(i: number) {
+    setItems((prev) => prev.filter((_, idx) => idx !== i))
+  }
+
+  const validItems = items.filter((it) => it.description.trim().length >= 3)
 
   async function save() {
     setBusy(true)
@@ -143,10 +175,12 @@ function NewProcurementModal({
       const created = await api<ProcurementRequest>('/procurement-requests', {
         method: 'POST',
         body: JSON.stringify({
-          type,
-          itemDescription,
+          items: validItems.map((it) => ({
+            type: it.type,
+            description: it.description.trim(),
+            quantity: it.quantity.trim() || undefined,
+          })),
           businessReason,
-          quantity: quantity || undefined,
         }),
       })
       onCreated(created.id)
@@ -167,27 +201,65 @@ function NewProcurementModal({
           <button
             className="btn primary"
             onClick={save}
-            disabled={busy || itemDescription.trim().length < 3 || businessReason.trim().length < 3}
+            disabled={busy || validItems.length === 0 || businessReason.trim().length < 3}
           >
             {busy ? 'Submitting…' : 'Submit'}
           </button>
         </>
       }
     >
-      <Field label="Product or service?">
-        <select value={type} onChange={(e) => setType(e.target.value as 'PRODUCT' | 'SERVICE')}>
-          <option value="PRODUCT">Product</option>
-          <option value="SERVICE">Service</option>
-        </select>
-      </Field>
-      <Field label="Item / service description">
-        <textarea rows={2} value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} />
+      <Field label="Items / services needed">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {items.map((it, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                gap: 6,
+                alignItems: 'flex-start',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                padding: 8,
+              }}
+            >
+              <select
+                value={it.type}
+                onChange={(e) => updateItem(i, { type: e.target.value as 'PRODUCT' | 'SERVICE' })}
+                style={{ width: 90 }}
+              >
+                <option value="PRODUCT">Product</option>
+                <option value="SERVICE">Service</option>
+              </select>
+              <input
+                placeholder="Description"
+                value={it.description}
+                onChange={(e) => updateItem(i, { description: e.target.value })}
+                style={{ flex: 2 }}
+              />
+              <input
+                placeholder="Qty"
+                value={it.quantity}
+                onChange={(e) => updateItem(i, { quantity: e.target.value })}
+                style={{ width: 70 }}
+              />
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => removeItem(i)}
+                disabled={items.length === 1}
+                title="Remove item"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button type="button" className="btn" onClick={addItem}>
+            + Add another item
+          </button>
+        </div>
       </Field>
       <Field label="Business reason">
         <textarea rows={2} value={businessReason} onChange={(e) => setBusinessReason(e.target.value)} />
-      </Field>
-      <Field label="Quantity" hint="Optional — if applicable">
-        <input value={quantity} onChange={(e) => setQuantity(e.target.value)} />
       </Field>
       <ErrorText>{error}</ErrorText>
     </Modal>

@@ -632,25 +632,39 @@ model TrainingChecklistItem {
 // ============================================================
 
 model ProcurementRequest {
-  id              String            @id @default(uuid())
-  number          Int               @unique @default(autoincrement())
-  type            ProcurementType
-  itemDescription String
-  businessReason  String
-  quantity        String?
-  requesterId     String
-  departmentId    String?
-  statusKey       ProcurementStatus @default(SUBMITTED)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id             String            @id @default(uuid())
+  number         Int               @unique @default(autoincrement())
+  businessReason String
+  requesterId    String
+  departmentId   String?
+  statusKey      ProcurementStatus @default(SUBMITTED)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   requester  User                   @relation("ProcurementRequester", fields: [requesterId], references: [id])
   department Department?            @relation(fields: [departmentId], references: [id])
+  items      ProcurementItem[]
   quotations ProcurementQuotation[]
 
   @@index([statusKey])
   @@index([requesterId])
   @@map("procurement_requests")
+}
+
+/// One line item (product or service) within a procurement request — a
+/// request can bundle several, each with its own type and quantity.
+model ProcurementItem {
+  id          String          @id @default(uuid())
+  requestId   String
+  type        ProcurementType
+  description String
+  quantity    String?
+  createdAt   DateTime        @default(now())
+
+  request ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("procurement_items")
 }
 
 model ProcurementQuotation {

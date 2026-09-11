@@ -230,17 +230,22 @@ export interface ProcurementQuotation {
   createdAt: string
 }
 
+export interface ProcurementItem {
+  id: string
+  type: 'PRODUCT' | 'SERVICE'
+  description: string
+  quantity: string | null
+}
+
 export interface ProcurementRequest {
   id: string
   number: number
-  type: 'PRODUCT' | 'SERVICE'
-  itemDescription: string
   businessReason: string
-  quantity: string | null
   statusKey: ProcurementStatusValue
   createdAt: string
   requester: { id: string; fullName: string; email: string }
   department: { id: string; name: string } | null
+  items: ProcurementItem[]
   quotations: ProcurementQuotation[]
 }
 

@@ -35,11 +35,19 @@ const STAGE_ROLE: Record<string, string> = {
 const DETAIL_INCLUDE = {
   requester: { select: { id: true, fullName: true, email: true } },
   department: { select: { id: true, name: true } },
+  items: { orderBy: { createdAt: 'asc' } },
   quotations: {
     orderBy: { createdAt: 'asc' },
     include: { createdBy: { select: { id: true, fullName: true } } },
   },
 } satisfies Prisma.ProcurementRequestInclude;
+
+/** Short "3x Router, Installation service, +1 more" style summary for lists/notifications. */
+function summarizeItems(items: { description: string }[]): string {
+  if (items.length === 0) return '(no items)';
+  const [first, ...rest] = items;
+  return rest.length ? `${first.description} +${rest.length} more` : first.description;
+}
 
 @Injectable()
 export class ProcurementService {
@@ -112,7 +120,7 @@ export class ProcurementService {
     }
     if (query.view === 'mine') where.requesterId = userId;
     if (query.statusKey) where.statusKey = query.statusKey as ProcurementStatus;
-    if (query.type) where.type = query.type;
+    if (query.type) where.items = { some: { type: query.type } };
 
     return this.prisma.procurementRequest.findMany({
       where,
@@ -137,13 +145,17 @@ export class ProcurementService {
     });
     const request = await this.prisma.procurementRequest.create({
       data: {
-        type: dto.type,
-        itemDescription: dto.itemDescription.trim(),
         businessReason: dto.businessReason.trim(),
-        quantity: dto.quantity?.trim() || null,
         requesterId: userId,
         departmentId: dto.departmentId ?? requester?.primaryDepartmentId ?? null,
         statusKey: ProcurementStatus.SUBMITTED,
+        items: {
+          create: dto.items.map((i) => ({
+            type: i.type,
+            description: i.description.trim(),
+            quantity: i.quantity?.trim() || null,
+          })),
+        },
       },
       include: DETAIL_INCLUDE,
     });
@@ -157,7 +169,7 @@ export class ProcurementService {
     const supervisors = await this.userIdsWithRole('SUPERVISOR');
     await this.notifications.notifyMany(supervisors, {
       type: NotificationType.APPROVAL_REQUEST,
-      title: `Procurement request awaiting review: ${request.itemDescription}`,
+      title: `Procurement request awaiting review: ${summarizeItems(request.items)}`,
       entityType: EntityType.PROCUREMENT_REQUEST,
       entityId: request.id,
     });
@@ -183,9 +195,19 @@ export class ProcurementService {
     const updated = await this.prisma.procurementRequest.update({
       where: { id },
       data: {
-        itemDescription: dto.itemDescription?.trim(),
         businessReason: dto.businessReason?.trim(),
-        quantity: dto.quantity?.trim(),
+        ...(dto.items
+          ? {
+              items: {
+                deleteMany: {},
+                create: dto.items.map((i) => ({
+                  type: i.type,
+                  description: i.description.trim(),
+                  quantity: i.quantity?.trim() || null,
+                })),
+              },
+            }
+          : {}),
       },
       include: DETAIL_INCLUDE,
     });
@@ -274,16 +296,17 @@ export class ProcurementService {
   }
 
   private async notifyStage(
-    req: { id: string; itemDescription: string },
+    req: { id: string; items: { description: string }[] },
     actorId: string,
     stage: ProcurementStatus,
     requesterId: string,
   ) {
+    const summary = summarizeItems(req.items);
     if (stage === ProcurementStatus.WITH_PURCHASING) {
       const ids = await this.userIdsWithRole('PURCHASING_FINANCE');
       await this.notifications.notifyMany(ids, {
         type: NotificationType.APPROVAL_REQUEST,
-        title: `Ready for quotations: ${req.itemDescription}`,
+        title: `Ready for quotations: ${summary}`,
         entityType: EntityType.PROCUREMENT_REQUEST,
         entityId: req.id,
       });
@@ -291,7 +314,7 @@ export class ProcurementService {
       const ids = await this.userIdsWithRole('DIRECTOR');
       await this.notifications.notifyMany(ids, {
         type: NotificationType.APPROVAL_REQUEST,
-        title: `Needs director approval: ${req.itemDescription}`,
+        title: `Needs director approval: ${summary}`,
         entityType: EntityType.PROCUREMENT_REQUEST,
         entityId: req.id,
       });
@@ -300,7 +323,7 @@ export class ProcurementService {
       await this.notifications.notify({
         recipientId: requesterId,
         type: NotificationType.STATUS_CHANGE,
-        title: `Your request "${req.itemDescription}" is now ${stage.replace(/_/g, ' ').toLowerCase()}`,
+        title: `Your request "${summary}" is now ${stage.replace(/_/g, ' ').toLowerCase()}`,
         entityType: EntityType.PROCUREMENT_REQUEST,
         entityId: req.id,
       });
@@ -347,7 +370,7 @@ export class ProcurementService {
       await this.notifications.notify({
         recipientId: r.requesterId,
         type: NotificationType.STATUS_CHANGE,
-        title: `Your request "${r.itemDescription}" was ${statusKey.toLowerCase()}`,
+        title: `Your request "${summarizeItems(r.items)}" was ${statusKey.toLowerCase()}`,
         entityType: EntityType.PROCUREMENT_REQUEST,
         entityId: id,
       });

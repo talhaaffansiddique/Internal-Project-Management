@@ -676,10 +676,8 @@ async function main() {
   );
 
   const PROCUREMENT: Array<{
-    type: 'PRODUCT' | 'SERVICE';
-    item: string;
+    items: Array<{ type: 'PRODUCT' | 'SERVICE'; item: string; quantity?: string }>;
     reason: string;
-    quantity?: string;
     requester: string;
     dept: string;
     status: 'SUBMITTED' | 'AWAITING_DIRECTOR' | 'WITH_PURCHASING' | 'ORDERED' | 'DELIVERED' | 'REJECTED';
@@ -693,25 +691,26 @@ async function main() {
     }>;
   }> = [
     {
-      type: 'PRODUCT',
-      item: 'Standard staff laptop x1',
+      items: [{ type: 'PRODUCT', item: 'Standard staff laptop', quantity: '1' }],
       reason: 'New warehouse hire starting next week',
-      quantity: '1',
       requester: 'omar.d',
       dept: 'Warehouse',
       status: 'SUBMITTED',
     },
     {
-      type: 'SERVICE',
-      item: 'Annual antivirus licences (52 seats)',
+      items: [{ type: 'SERVICE', item: 'Annual antivirus licences (52 seats)' }],
       reason: 'Current licence expires this month',
       requester: 'admin',
       dept: 'IT',
       status: 'AWAITING_DIRECTOR',
     },
     {
-      type: 'SERVICE',
-      item: 'Marketing print — trade show materials',
+      // Multi-item example: a mix of product + service in one request.
+      items: [
+        { type: 'SERVICE', item: 'Marketing print — trade show materials' },
+        { type: 'PRODUCT', item: 'Branded pop-up banner stand', quantity: '2' },
+        { type: 'PRODUCT', item: 'Table-top display cases', quantity: '4' },
+      ],
       reason: 'Upcoming industry trade show',
       requester: 'lena.m',
       dept: 'Sales',
@@ -722,10 +721,8 @@ async function main() {
       ],
     },
     {
-      type: 'PRODUCT',
-      item: 'Ergonomic office chairs x6',
+      items: [{ type: 'PRODUCT', item: 'Ergonomic office chairs', quantity: '6' }],
       reason: 'HR office refresh',
-      quantity: '6',
       requester: 'nadia.f',
       dept: 'HR',
       status: 'DELIVERED',
@@ -740,13 +737,17 @@ async function main() {
   for (const p of PROCUREMENT) {
     const req = await prisma.procurementRequest.create({
       data: {
-        type: p.type,
-        itemDescription: p.item,
         businessReason: p.reason,
-        quantity: p.quantity ?? null,
         requesterId: userId[p.requester],
         departmentId: deptIdByName.get(p.dept) ?? null,
         statusKey: p.status,
+        items: {
+          create: p.items.map((i) => ({
+            type: i.type,
+            description: i.item,
+            quantity: i.quantity ?? null,
+          })),
+        },
       },
     });
     await prisma.auditLog.create({

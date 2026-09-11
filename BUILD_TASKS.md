@@ -261,5 +261,26 @@ Each step restates scope + success criteria before code is written.
   linked a file to PR-0012 as Priya Nair, confirmed `/procurement-
   requests/:id/audit` returns `ATTACHMENT_ADDED — uploaded a file —
   dnd-test.txt`; test attachment cleaned up afterward.
+- [x] **CR-5 — Multiple line items per procurement request**
+  Schema: new `ProcurementItem` model (type PRODUCT|SERVICE, description,
+  quantity) with a many-to-one relation to `ProcurementRequest`; `type`,
+  `itemDescription`, `quantity` moved off the request onto its items
+  (migration `20260911120036_procurement_line_items`, with a data backfill
+  so existing requests each get one item before the old columns are
+  dropped).
+  API: `CreateProcurementDto`/`UpdateProcurementDto` now take an `items[]`
+  array (min 1, each validated) instead of a single type/description/qty;
+  list/stats/notification titles summarize as "first item +N more"; the
+  `type` list filter now matches "any item of this type."
+  Web: the New-request modal is now a repeatable item-row list (type ·
+  description · qty · remove), "+ Add another item"; the list table and
+  detail header show the first item + "+N more" and "Mixed" when types
+  differ; the Details tab shows a full items table (type/description/qty)
+  instead of one quantity field.
+  *Done:* `npm run build` clean for both apps; migration applied + demo data
+  reseeded (`seed.ts` + `seed-demo.ts`, one seeded request now has 3 mixed
+  items); verified via API (created a 3-item mixed request) and in-browser
+  (list shows "router +2 more / Mixed", detail shows all 3 rows, New-request
+  modal adds/removes item rows correctly).
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

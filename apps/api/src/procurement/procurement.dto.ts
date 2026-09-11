@@ -1,4 +1,6 @@
 import {
+  ArrayMinSize,
+  IsArray,
   IsDateString,
   IsEnum,
   IsIn,
@@ -8,7 +10,9 @@ import {
   IsUUID,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ProcurementType } from '@prisma/client';
 
 export class ListProcurementQuery {
@@ -17,18 +21,30 @@ export class ListProcurementQuery {
   @IsOptional() @IsEnum(ProcurementType) type?: ProcurementType;
 }
 
-export class CreateProcurementDto {
+export class ProcurementItemDto {
   @IsEnum(ProcurementType) type!: ProcurementType;
-  @IsString() @MinLength(3) itemDescription!: string;
-  @IsString() @MinLength(3) businessReason!: string;
+  @IsString() @MinLength(3) description!: string;
   @IsOptional() @IsString() quantity?: string;
+}
+
+export class CreateProcurementDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ProcurementItemDto)
+  items!: ProcurementItemDto[];
+  @IsString() @MinLength(3) businessReason!: string;
   @IsOptional() @IsUUID() departmentId?: string;
 }
 
 export class UpdateProcurementDto {
-  @IsOptional() @IsString() @MinLength(3) itemDescription?: string;
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ProcurementItemDto)
+  items?: ProcurementItemDto[];
   @IsOptional() @IsString() @MinLength(3) businessReason?: string;
-  @IsOptional() @IsString() quantity?: string;
 }
 
 export class SupervisorDecisionDto {
