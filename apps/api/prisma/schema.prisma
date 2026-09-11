@@ -62,6 +62,26 @@ enum TrainingAck {
   NEEDS_FOLLOW_UP
 }
 
+enum ProcurementType {
+  PRODUCT
+  SERVICE
+}
+
+enum ProcurementStatus {
+  SUBMITTED
+  AWAITING_DIRECTOR
+  WITH_PURCHASING
+  ORDERED
+  DELIVERED
+  REJECTED
+}
+
+enum QuotationStatus {
+  PENDING
+  SELECTED
+  REJECTED
+}
+
 enum NotificationType {
   MENTION
   ASSIGNMENT
@@ -119,6 +139,8 @@ model User {
   trainingsAsTrainer  Training[]       @relation("TrainingTrainer")
   trainingsCreated    Training[]       @relation("TrainingCreator")
   trainingParticipations TrainingParticipant[]
+  procurementRequested ProcurementRequest[] @relation("ProcurementRequester")
+  procurementQuotationsAdded ProcurementQuotation[]
 
   @@index([primaryDepartmentId])
   @@index([supervisorId])
@@ -161,8 +183,9 @@ model Department {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members User[] @relation("DepartmentMembers")
-  teams   Team[]
+  members             User[]               @relation("DepartmentMembers")
+  teams               Team[]
+  procurementRequests ProcurementRequest[]
 
   @@map("departments")
 }
@@ -602,4 +625,53 @@ model TrainingChecklistItem {
   training Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
 
   @@map("training_checklist_items")
+}
+
+// ============================================================
+// Procurement (brief §14)
+// ============================================================
+
+model ProcurementRequest {
+  id              String            @id @default(uuid())
+  number          Int               @unique @default(autoincrement())
+  type            ProcurementType
+  itemDescription String
+  businessReason  String
+  quantity        String?
+  requesterId     String
+  departmentId    String?
+  statusKey       ProcurementStatus @default(SUBMITTED)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  requester  User                   @relation("ProcurementRequester", fields: [requesterId], references: [id])
+  department Department?            @relation(fields: [departmentId], references: [id])
+  quotations ProcurementQuotation[]
+
+  @@index([statusKey])
+  @@index([requesterId])
+  @@map("procurement_requests")
+}
+
+model ProcurementQuotation {
+  id             String          @id @default(uuid())
+  requestId      String
+  vendorName     String
+  amount         Float
+  quotationDate  DateTime?
+  validUntil     DateTime?
+  paymentTerms   String?
+  deliveryTime   String?
+  comments       String?
+  attachmentId   String?
+  status         QuotationStatus @default(PENDING)
+  createdById    String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdBy User               @relation(fields: [createdById], references: [id])
+
+  @@index([requestId])
+  @@map("procurement_quotations")
 }

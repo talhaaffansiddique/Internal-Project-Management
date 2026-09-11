@@ -12,6 +12,7 @@ import { TicketsModule } from './tickets/tickets.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
 import { MeetingsModule } from './meetings/meetings.module.js';
 import { TrainingModule } from './training/training.module.js';
+import { ProcurementModule } from './procurement/procurement.module.js';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { TrainingModule } from './training/training.module.js';
     ProjectsModule,
     MeetingsModule,
     TrainingModule,
+    ProcurementModule,
     HealthModule,
   ],
 })

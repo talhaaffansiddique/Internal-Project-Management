@@ -217,6 +217,23 @@ Each step restates scope + success criteria before code is written.
 
   Also: dev web port 5173 → **5180** (`strictPort`) — 5173 was taken by another
   local project; WEB_ORIGIN + README updated.
-- [ ] **v1.4 — Procurement** (supervisor routing, director path, quotations)
+- [x] **v1.4 — Procurement** (build 1.4.0)
+  Schema: ProcurementRequest (PR-0001, type PRODUCT|SERVICE, item description,
+  business reason, quantity, department, statusKey enum), ProcurementQuotation
+  (vendor, amount, terms, delivery, status PENDING|SELECTED|REJECTED).
+  API: role-stage routing per §14.1 — Employee submits (SUBMITTED, visible to
+  any SUPERVISOR) → supervisor-decision (approve to purchasing / forward to
+  director / reject) → director-decision (any DIRECTOR, when AWAITING_DIRECTOR)
+  → WITH_PURCHASING (any PURCHASING_FINANCE adds/selects quotations, selecting
+  one auto-rejects the rest) → purchase-status ORDERED (blocked without a
+  selected quotation) → DELIVERED. Every stage change dated + audited +
+  notifies the requester; entering a stage notifies the role that owns it.
+  Web: Procurement list + New-request modal → ProcurementDetail with
+  role-and-stage-aware action bar (supervisor buttons / director buttons /
+  purchasing quotations table + add form) plus Discussion/Files/History tabs.
+  *Done:* verified — full routing chain via API (submit → forward → director
+  approve → 2 quotations → select → ordered → delivered, with 403s at each
+  wrong-role/wrong-stage attempt) + browser (quotations table, select, mark
+  ordered live-updates the stage).
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

@@ -16,6 +16,7 @@ import Projects from './pages/projects/Projects'
 import Tasks from './pages/Tasks'
 import Meetings from './pages/meetings/Meetings'
 import Training from './pages/training/Training'
+import Procurement from './pages/procurement/Procurement'
 
 type View =
   | 'dashboard'
@@ -25,6 +26,7 @@ type View =
   | 'tasks'
   | 'meetings'
   | 'training'
+  | 'procurement'
   | 'notifications'
   | 'users'
   | 'departments'
@@ -39,6 +41,7 @@ const NAV: { key: View; label: string; group: string; admin?: boolean }[] = [
   { key: 'tasks', label: 'Tasks', group: 'Main' },
   { key: 'meetings', label: 'Meetings & Calendar', group: 'Main' },
   { key: 'training', label: 'Training', group: 'Main' },
+  { key: 'procurement', label: 'Procurement', group: 'Main' },
   { key: 'notifications', label: 'Notifications', group: 'Main' },
   { key: 'users', label: 'Users', group: 'Administration', admin: true },
   { key: 'departments', label: 'Departments', group: 'Administration', admin: true },
@@ -159,6 +162,7 @@ export default function AdminApp() {
           {view === 'tasks' && <Tasks onOpenProject={openProject} />}
           {view === 'meetings' && <Meetings />}
           {view === 'training' && <Training />}
+          {view === 'procurement' && <Procurement />}
           {view === 'notifications' && (
             <Notifications onChanged={refreshUnread} onOpenTicket={openTicket} />
           )}

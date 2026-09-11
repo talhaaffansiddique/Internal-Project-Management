@@ -207,6 +207,43 @@ export interface Training {
   checklist: TrainingChecklistItem[]
 }
 
+export type ProcurementStatusValue =
+  | 'SUBMITTED'
+  | 'AWAITING_DIRECTOR'
+  | 'WITH_PURCHASING'
+  | 'ORDERED'
+  | 'DELIVERED'
+  | 'REJECTED'
+
+export interface ProcurementQuotation {
+  id: string
+  vendorName: string
+  amount: number
+  quotationDate: string | null
+  validUntil: string | null
+  paymentTerms: string | null
+  deliveryTime: string | null
+  comments: string | null
+  attachmentId: string | null
+  status: 'PENDING' | 'SELECTED' | 'REJECTED'
+  createdBy: { id: string; fullName: string }
+  createdAt: string
+}
+
+export interface ProcurementRequest {
+  id: string
+  number: number
+  type: 'PRODUCT' | 'SERVICE'
+  itemDescription: string
+  businessReason: string
+  quantity: string | null
+  statusKey: ProcurementStatusValue
+  createdAt: string
+  requester: { id: string; fullName: string; email: string }
+  department: { id: string; name: string } | null
+  quotations: ProcurementQuotation[]
+}
+
 export interface Ticket {
   id: string
   number: number

@@ -167,6 +167,7 @@ async function reset() {
     EntityType.TASK,
     EntityType.MEETING,
     EntityType.TRAINING,
+    EntityType.PROCUREMENT_REQUEST,
   ]) {
     await prisma.notification.deleteMany({ where: { entityType: et } });
     await prisma.auditLog.deleteMany({ where: { entityType: et } });
@@ -176,6 +177,8 @@ async function reset() {
     await prisma.commentMention.deleteMany({ where: { comment: { entityType: et } } });
     await prisma.comment.deleteMany({ where: { entityType: et } });
   }
+  await prisma.procurementQuotation.deleteMany({});
+  await prisma.procurementRequest.deleteMany({});
   await prisma.trainingChecklistItem.deleteMany({});
   await prisma.trainingParticipant.deleteMany({});
   await prisma.training.deleteMany({});
@@ -665,8 +668,114 @@ async function main() {
     trnCount += 1;
   }
 
+  // ---------- Procurement ----------
+  const deptIdByName = new Map(
+    (await prisma.department.findMany({ select: { id: true, name: true } })).map(
+      (d) => [d.name, d.id],
+    ),
+  );
+
+  const PROCUREMENT: Array<{
+    type: 'PRODUCT' | 'SERVICE';
+    item: string;
+    reason: string;
+    quantity?: string;
+    requester: string;
+    dept: string;
+    status: 'SUBMITTED' | 'AWAITING_DIRECTOR' | 'WITH_PURCHASING' | 'ORDERED' | 'DELIVERED' | 'REJECTED';
+    quotations?: Array<{
+      vendor: string;
+      amount: number;
+      terms?: string;
+      delivery?: string;
+      selected?: boolean;
+      rejected?: boolean;
+    }>;
+  }> = [
+    {
+      type: 'PRODUCT',
+      item: 'Standard staff laptop x1',
+      reason: 'New warehouse hire starting next week',
+      quantity: '1',
+      requester: 'omar.d',
+      dept: 'Warehouse',
+      status: 'SUBMITTED',
+    },
+    {
+      type: 'SERVICE',
+      item: 'Annual antivirus licences (52 seats)',
+      reason: 'Current licence expires this month',
+      requester: 'admin',
+      dept: 'IT',
+      status: 'AWAITING_DIRECTOR',
+    },
+    {
+      type: 'SERVICE',
+      item: 'Marketing print — trade show materials',
+      reason: 'Upcoming industry trade show',
+      requester: 'lena.m',
+      dept: 'Sales',
+      status: 'WITH_PURCHASING',
+      quotations: [
+        { vendor: 'PrintWorks', amount: 2100, terms: '50% advance', delivery: '2 weeks', selected: true },
+        { vendor: 'QuickPrint Co.', amount: 2450, terms: 'Net 15', delivery: '1 week' },
+      ],
+    },
+    {
+      type: 'PRODUCT',
+      item: 'Ergonomic office chairs x6',
+      reason: 'HR office refresh',
+      quantity: '6',
+      requester: 'nadia.f',
+      dept: 'HR',
+      status: 'DELIVERED',
+      quotations: [
+        { vendor: 'OfficePlus', amount: 1800, terms: 'Net 30', delivery: '3 weeks', selected: true },
+        { vendor: 'ErgoSupply', amount: 2100, terms: 'Net 15', delivery: '1 week' },
+      ],
+    },
+  ];
+
+  let procCount = 0;
+  for (const p of PROCUREMENT) {
+    const req = await prisma.procurementRequest.create({
+      data: {
+        type: p.type,
+        itemDescription: p.item,
+        businessReason: p.reason,
+        quantity: p.quantity ?? null,
+        requesterId: userId[p.requester],
+        departmentId: deptIdByName.get(p.dept) ?? null,
+        statusKey: p.status,
+      },
+    });
+    await prisma.auditLog.create({
+      data: {
+        entityType: EntityType.PROCUREMENT_REQUEST,
+        entityId: req.id,
+        action: 'CREATED',
+        summary: `submitted procurement request PR-${String(req.number).padStart(4, '0')}`,
+        actorId: userId[p.requester],
+      },
+    });
+    for (const q of p.quotations ?? []) {
+      await prisma.procurementQuotation.create({
+        data: {
+          requestId: req.id,
+          vendorName: q.vendor,
+          amount: q.amount,
+          paymentTerms: q.terms ?? null,
+          deliveryTime: q.delivery ?? null,
+          status: q.selected ? 'SELECTED' : q.rejected ? 'REJECTED' : 'PENDING',
+          createdById: userId['priya.n'],
+        },
+      });
+    }
+    procCount += 1;
+  }
+
   console.log(
-    `Demo data ready: ${USERS.length} users, ${TEAMS.length} teams, ${created} tickets, ${projCount} projects, ${taskCount} tasks, ${meetCount} meetings, ${trnCount} trainings.`,
+    `Demo data ready: ${USERS.length} users, ${TEAMS.length} teams, ${created} tickets, ${projCount} projects, ${taskCount} tasks, ${meetCount} meetings, ${trnCount} trainings, ${procCount} procurement requests.`,
   );
   console.log(`All demo logins use password: ${PASSWORD}`);
   console.log('e.g.  admin@demo.opshub  /  sara.k@demo.opshub  /  lena.m@demo.opshub');
