@@ -32,6 +32,9 @@
   --shadow-xl: 0 20px 50px rgba(15, 23, 42, 0.25);
   --scrim: rgba(15, 23, 42, 0.45);
   --focus-ring: #dbeafe;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: var(--font-body);
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 }
 
 :root[data-theme='dark'],
@@ -106,13 +109,80 @@
   }
 }
 
+/* ============================================================
+   Company-wide skins (Super Admin → Administration → Appearance)
+   Each skin redefines the same token set for light + dark, exactly
+   like the base palette above, so the rest of the app (which only
+   ever reads var(--...)) re-themes with no further changes needed.
+   Sidebar tokens stay constant across a skin's own light/dark modes —
+   only the working-area tokens (bg/surface/text/primary/accent/status)
+   swap, matching how the base theme already treats the rail.
+   ============================================================ */
+
+/* ---------- Harbor Slate: calm slate + deep teal, Libre Franklin/Karla ---------- */
+:root[data-skin='harbor'] {
+  --bg: #e9edee; --surface: #ffffff; --surface-2: #f3f6f6; --surface-3: #eaf0f0;
+  --border: #d7dedf; --border-soft: #e4e9ea; --border-strong: #b7c4c5;
+  --text: #1e2a2e; --text-muted: #5b6a6d; --text-faint: #8b989a;
+  --primary: #2f7a73; --primary-strong: #235d57; --primary-soft: #dceeec; --on-primary: #fff;
+  --accent: #3c7fd1;
+  --sidebar-bg: #17262a; --sidebar-text: #c9d6d6; --sidebar-hover: rgba(255,255,255,.06);
+  --sidebar-active: #24383d; --sidebar-border: rgba(255,255,255,.08);
+  --ok: #3f8f5a; --danger: #c15b4a; --danger-border: #e3b6ab; --danger-soft: #f5dfda;
+  --focus-ring: #dceeec;
+  --font-display: 'Libre Franklin', var(--font-body); --font-body: 'Karla', -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+:root[data-skin='harbor'][data-theme='dark'] { --bg: #0e1b1e; --surface: #142428; --surface-2: #0f1d20; --surface-3: #1a2d31; --border: #24393d; --border-soft: #1c2f32; --border-strong: #355055; --text: #dce7e7; --text-muted: #93a7a8; --text-faint: #62787a; --primary: #3fa79d; --primary-strong: #57c2b7; --primary-soft: #163b37; --accent: #6fa9e8; --ok: #4fbe73; --danger: #e4776a; --danger-border: #6b2c24; --danger-soft: #2a1613; --focus-ring: #163b37; --scrim: rgba(0,0,0,.6); }
+@media (prefers-color-scheme: dark) {
+  :root[data-skin='harbor']:not([data-theme='light']) { --bg: #0e1b1e; --surface: #142428; --surface-2: #0f1d20; --surface-3: #1a2d31; --border: #24393d; --border-soft: #1c2f32; --border-strong: #355055; --text: #dce7e7; --text-muted: #93a7a8; --text-faint: #62787a; --primary: #3fa79d; --primary-strong: #57c2b7; --primary-soft: #163b37; --accent: #6fa9e8; --ok: #4fbe73; --danger: #e4776a; --danger-border: #6b2c24; --danger-soft: #2a1613; --focus-ring: #163b37; --scrim: rgba(0,0,0,.6); }
+}
+
+/* ---------- Foundry: high-octane charcoal + amber/cyan, Big Shoulders/Work Sans ---------- */
+:root[data-skin='foundry'] {
+  --bg: #171b20; --surface: #1e242b; --surface-2: #252c34; --surface-3: #2b333c;
+  --border: #333c45; --border-soft: #2a323b; --border-strong: #454f59;
+  --text: #e9ecee; --text-muted: #98a3ac; --text-faint: #67717a;
+  --primary: #f2a93b; --primary-strong: #ffbe5c; --primary-soft: #3a2e17; --on-primary: #20150a;
+  --accent: #52c7d1;
+  --sidebar-bg: #12161a; --sidebar-text: #c4cdd3; --sidebar-hover: rgba(255,255,255,.04);
+  --sidebar-active: #1f262d; --sidebar-border: rgba(255,255,255,.06);
+  --ok: #6fcb8e; --danger: #e4604b; --danger-border: #5a2620; --danger-soft: #2a1512;
+  --focus-ring: #3a2e17;
+  --font-display: 'Big Shoulders Display', var(--font-body); --font-body: 'Work Sans', -apple-system, sans-serif;
+  --font-mono: 'Fragment Mono', ui-monospace, monospace;
+}
+:root[data-skin='foundry'][data-theme='light'] { --bg: #efede7; --surface: #ffffff; --surface-2: #f7f5f0; --surface-3: #efece3; --border: #ddd8cc; --border-soft: #e7e3d7; --border-strong: #c7c0ae; --text: #23201a; --text-muted: #675f4e; --text-faint: #948c77; --primary: #b9782a; --primary-strong: #96611f; --primary-soft: #f3e3c6; --on-primary: #fff; --accent: #2e8b96; --ok: #3f8f5a; --danger: #b8503c; --danger-border: #e3b6ab; --danger-soft: #f5dfda; --focus-ring: #f3e3c6; }
+
+/* ---------- Meadow: fresh sage-cream + clay, Bricolage Grotesque/Public Sans ---------- */
+:root[data-skin='meadow'] {
+  --bg: #eef0e2; --surface: #ffffff; --surface-2: #f6f7ec; --surface-3: #eff1e0;
+  --border: #dbdecb; --border-soft: #e6e8d8; --border-strong: #c4c9ac;
+  --text: #242b1e; --text-muted: #68705a; --text-faint: #98a085;
+  --primary: #75895a; --primary-strong: #5e7248; --primary-soft: #e3ebd6; --on-primary: #fff;
+  --accent: #c97b4a;
+  --sidebar-bg: #25301f; --sidebar-text: #d7dec6; --sidebar-hover: rgba(255,255,255,.05);
+  --sidebar-active: #333f27; --sidebar-border: rgba(255,255,255,.09);
+  --ok: #5e9a5c; --danger: #b85c4d; --danger-border: #e3b6ab; --danger-soft: #f4dfd9;
+  --focus-ring: #e3ebd6;
+  --font-display: 'Bricolage Grotesque', var(--font-body); --font-body: 'Public Sans', -apple-system, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+}
+:root[data-skin='meadow'][data-theme='dark'] { --bg: #1b2016; --surface: #222a1c; --surface-2: #1b2317; --surface-3: #283322; --border: #33402a; --border-soft: #29331f; --border-strong: #48583b; --text: #e7ebdb; --text-muted: #9fab8c; --text-faint: #6c7a5c; --primary: #8fae6e; --primary-strong: #a6c688; --primary-soft: #2c3a22; --accent: #d99361; --ok: #7cc17a; --danger: #d97a67; --danger-border: #5c2e24; --danger-soft: #2a1613; --focus-ring: #2c3a22; --scrim: rgba(0,0,0,.6); }
+@media (prefers-color-scheme: dark) {
+  :root[data-skin='meadow']:not([data-theme='light']) { --bg: #1b2016; --surface: #222a1c; --surface-2: #1b2317; --surface-3: #283322; --border: #33402a; --border-soft: #29331f; --border-strong: #48583b; --text: #e7ebdb; --text-muted: #9fab8c; --text-faint: #6c7a5c; --primary: #8fae6e; --primary-strong: #a6c688; --primary-soft: #2c3a22; --accent: #d99361; --ok: #7cc17a; --danger: #d97a67; --danger-border: #5c2e24; --danger-soft: #2a1613; --focus-ring: #2c3a22; --scrim: rgba(0,0,0,.6); }
+}
+
 * { box-sizing: border-box; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body);
   color: var(--text);
   background: var(--bg);
 }
+
+h1, h2, h3 { font-family: var(--font-display); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 .muted { color: var(--text-muted); }
 .small { font-size: 12px; }
@@ -650,3 +720,21 @@ table.grid tbody tr:hover { background: var(--surface-2); }
   .side-group { width: 100%; }
   .side-foot { display: none; }
 }
+
+/* ---------- Appearance (Super Admin skin picker) ---------- */
+.skin-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px;
+}
+.skin-card {
+  text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  background: var(--surface); border: 1.5px solid var(--border-soft); border-radius: 14px;
+  padding: 16px; box-shadow: var(--shadow-sm); transition: border-color .15s, transform .15s;
+}
+.skin-card:hover:not(:disabled) { border-color: var(--border-strong); transform: translateY(-1px); }
+.skin-card:disabled { cursor: default; opacity: .85; }
+.skin-card.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.skin-swatch { display: flex; gap: 5px; margin-bottom: 12px; }
+.skin-swatch span { width: 22px; height: 22px; border-radius: 6px; border: 1px solid rgba(0,0,0,.08); }
+.skin-name { font-weight: 700; font-size: 14.5px; margin-bottom: 3px; }
+.skin-tagline { color: var(--text-muted); font-size: 12.5px; margin: 0 0 12px; line-height: 1.45; min-height: 34px; }
+.skin-status { font-size: 12.5px; }

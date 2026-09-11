@@ -395,5 +395,42 @@ Each step restates scope + success criteria before code is written.
   → AED 2,100) and terms; seeded PR-0029's Activity tab now shows the full
   CREATED → SUPERVISOR_DECISION → QUOTATION_ADDED → QUOTATION_SELECTED
   chain with names.
+- [x] **CR-9 — Company-wide theme skins (Super Admin only)**
+  Three alternate visual identities — Harbor Slate (calm slate + teal,
+  Libre Franklin/Karla), Foundry (dark-first charcoal + amber/cyan, Big
+  Shoulders Display/Work Sans), Meadow (sage-cream + clay, Bricolage
+  Grotesque/Public Sans) — plus the original Default, selectable as one
+  company-wide setting. Only Super Admin can change it; everyone else's
+  screen updates automatically (45s poll), no re-login required. The
+  existing per-user Light/Dark/System toggle stays independent and layers
+  on top — each skin defines both a light and a dark token set (Foundry is
+  dark-first by design, with a light override for anyone who prefers it).
+  Backend: new `AppearanceModule` (`GET /appearance` public — needed by the
+  signed-out login page too; `PATCH /appearance` `@Roles('SUPER_ADMIN')`),
+  backed by the existing `SystemSetting` key/value table (key
+  `appearance.skin`) — no schema migration needed.
+  Web: `theme.tsx` now also fetches/polls/applies a `data-skin` attribute
+  alongside the existing `data-theme`; `App.css` gained `--font-display` /
+  `--font-body` / `--font-mono` tokens (applied to `body`/`h1-h3`/`.mono`)
+  plus a full second/third/fourth token set per skin under
+  `[data-skin='harbor'|'foundry'|'meadow']` (each with its own light+dark
+  variants, mirroring the base theme's `[data-theme]` +
+  `prefers-color-scheme` pattern) — since every existing component already
+  reads these tokens, the whole app re-themes with no per-component
+  changes. New Super-Admin-only "Appearance" page under Administration
+  (`pages/admin/Appearance.tsx`) with a swatch/name/tagline card per skin
+  and a live "Active for everyone" indicator. Fonts loaded via a combined
+  Google Fonts link in `index.html`.
+  *Done:* `npm run build` clean for both apps (no migration required).
+  Verified via API: public GET works signed-out, PATCH correctly 403s a
+  non-Super-Admin and 200s for Super Admin, change is instantly visible on
+  a fresh public GET. Verified in-browser as Super Admin: switched to
+  Harbor Slate and confirmed via computed styles it resolves the dark
+  variant on system-dark (`--bg:#0e1b1e`, `--primary:#3fa79d`) and the
+  light variant on explicit Light; switched to Foundry and confirmed
+  `h1` computes to `"Big Shoulders Display"` and the light override
+  applies under the Light toggle; confirmed the rest of the UI (tables,
+  badges, primary buttons) re-themes automatically on the Procurement
+  list purely from the token swap. Reset to Default before finishing.
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

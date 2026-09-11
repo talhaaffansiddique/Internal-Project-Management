@@ -17,6 +17,7 @@ import Tasks from './pages/Tasks'
 import Meetings from './pages/meetings/Meetings'
 import Training from './pages/training/Training'
 import Procurement from './pages/procurement/Procurement'
+import Appearance from './pages/admin/Appearance'
 
 type View =
   | 'dashboard'
@@ -32,8 +33,15 @@ type View =
   | 'departments'
   | 'teams'
   | 'masterdata'
+  | 'appearance'
 
-const NAV: { key: View; label: string; group: string; admin?: boolean }[] = [
+const NAV: {
+  key: View
+  label: string
+  group: string
+  admin?: boolean
+  superAdmin?: boolean
+}[] = [
   { key: 'dashboard', label: 'Dashboard', group: 'Main' },
   { key: 'mywork', label: 'My Work', group: 'Main' },
   { key: 'tickets', label: 'Tickets & Requests', group: 'Main' },
@@ -47,6 +55,7 @@ const NAV: { key: View; label: string; group: string; admin?: boolean }[] = [
   { key: 'departments', label: 'Departments', group: 'Administration', admin: true },
   { key: 'teams', label: 'Teams', group: 'Administration', admin: true },
   { key: 'masterdata', label: 'Master Data', group: 'Administration', admin: true },
+  { key: 'appearance', label: 'Appearance', group: 'Administration', admin: true, superAdmin: true },
 ]
 
 export default function AdminApp() {
@@ -80,6 +89,7 @@ export default function AdminApp() {
   const canAdmin = !!user?.roles.some(
     (r) => r === 'ADMIN' || r === 'SUPER_ADMIN',
   )
+  const isSuperAdmin = !!user?.roles.includes('SUPER_ADMIN')
   const initials = user!.fullName
     .split(' ')
     .map((p) => p[0])
@@ -98,14 +108,14 @@ export default function AdminApp() {
           <div key={g}>
             <div className="side-group">{g}</div>
             {NAV.filter((n) => n.group === g).map((n) => {
-              const locked = n.admin && !canAdmin
+              const locked = n.superAdmin ? !isSuperAdmin : n.admin && !canAdmin
               return (
                 <button
                   key={n.key}
                   className={`side-item ${view === n.key ? 'active' : ''}`}
                   disabled={locked}
                   onClick={() => setView(n.key)}
-                  title={locked ? 'Requires Admin role' : undefined}
+                  title={locked ? (n.superAdmin ? 'Requires Super Admin role' : 'Requires Admin role') : undefined}
                 >
                   {n.label}
                   {n.key === 'notifications' && unread > 0 && (
@@ -170,6 +180,7 @@ export default function AdminApp() {
           {view === 'departments' && canAdmin && <Departments />}
           {view === 'teams' && canAdmin && <Teams />}
           {view === 'masterdata' && canAdmin && <MasterData />}
+          {view === 'appearance' && isSuperAdmin && <Appearance />}
         </main>
       </div>
     </div>
