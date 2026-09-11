@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { api } from '../api'
 import { useAuth } from '../auth'
+import { ErrorText } from '../ui'
 import type { UserLookup } from '../types'
 
 /* ------------------------------------------------------------------ */
@@ -257,6 +258,9 @@ export function EntityAttachments({
 }) {
   const [rows, setRows] = useState<EntityAttachment[]>([])
   const [busy, setBusy] = useState(false)
+  const [dragging, setDragging] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const dragDepth = useRef(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function load() {
@@ -269,53 +273,103 @@ export function EntityAttachments({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityId])
 
-  async function upload(file: File) {
+  async function uploadOne(file: File) {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/v1/attachments', {
+      method: 'POST',
+      body: fd,
+      credentials: 'include',
+    })
+    if (!res.ok) throw new Error(`Could not upload "${file.name}"`)
+    const created = (await res.json()) as { id: string }
+    await api(`/${entityType}/${entityId}/attachments`, {
+      method: 'POST',
+      body: JSON.stringify({ attachmentId: created.id }),
+    })
+  }
+
+  async function uploadFiles(files: FileList | File[]) {
+    const list = Array.from(files)
+    if (list.length === 0) return
     setBusy(true)
+    setError(null)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/v1/attachments', {
-        method: 'POST',
-        body: fd,
-        credentials: 'include',
-      })
-      if (!res.ok) throw new Error('Upload failed')
-      const created = (await res.json()) as { id: string }
-      await api(`/${entityType}/${entityId}/attachments`, {
-        method: 'POST',
-        body: JSON.stringify({ attachmentId: created.id }),
-      })
+      for (const file of list) {
+        await uploadOne(file)
+      }
       await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Upload failed')
     } finally {
       setBusy(false)
       if (inputRef.current) inputRef.current.value = ''
     }
   }
 
+  function onDragEnter(e: DragEvent) {
+    e.preventDefault()
+    dragDepth.current += 1
+    setDragging(true)
+  }
+  function onDragOver(e: DragEvent) {
+    e.preventDefault()
+  }
+  function onDragLeave(e: DragEvent) {
+    e.preventDefault()
+    dragDepth.current = Math.max(0, dragDepth.current - 1)
+    if (dragDepth.current === 0) setDragging(false)
+  }
+  function onDrop(e: DragEvent) {
+    e.preventDefault()
+    dragDepth.current = 0
+    setDragging(false)
+    if (e.dataTransfer.files?.length) void uploadFiles(e.dataTransfer.files)
+  }
+
   return (
     <div>
-      {rows.length === 0 && <p className="muted small">No files.</p>}
-      <ul className="mini-list">
-        {rows.map((a) => (
-          <li key={a.id}>
-            <a href={`/api/v1/attachments/${a.id}/download`}>
-              {a.originalFilename}
-            </a>
-            <span className="muted small">
-              {(a.sizeBytes / 1024).toFixed(0)} KB · {a.uploadedBy.fullName}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <input
-        ref={inputRef}
-        type="file"
-        disabled={busy}
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) void upload(f)
-        }}
-      />
+      {rows.length > 0 && (
+        <ul className="mini-list">
+          {rows.map((a) => (
+            <li key={a.id}>
+              <a href={`/api/v1/attachments/${a.id}/download`}>
+                {a.originalFilename}
+              </a>
+              <span className="muted small">
+                {(a.sizeBytes / 1024).toFixed(0)} KB · {a.uploadedBy.fullName}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <label
+        className={`dropzone ${dragging ? 'dragging' : ''} ${busy ? 'busy' : ''}`}
+        onDragEnter={onDragEnter}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          disabled={busy}
+          onChange={(e) => {
+            if (e.target.files?.length) void uploadFiles(e.target.files)
+          }}
+        />
+        <span className="dropzone-icon">📎</span>
+        <span>
+          {busy
+            ? 'Uploading…'
+            : dragging
+              ? 'Drop to upload'
+              : 'Drag files here, or click to choose'}
+        </span>
+      </label>
+      <ErrorText>{error}</ErrorText>
     </div>
   )
 }

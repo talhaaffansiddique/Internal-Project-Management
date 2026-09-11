@@ -235,5 +235,17 @@ Each step restates scope + success criteria before code is written.
   approve → 2 quotations → select → ordered → delivered, with 403s at each
   wrong-role/wrong-stage attempt) + browser (quotations table, select, mark
   ordered live-updates the stage).
+- [x] **CR-3 — Drag-and-drop file upload**
+  `EntityAttachments` (apps/web/src/components/entity-panels.tsx) — the single
+  shared attachments component used by every Files/Materials tab (Tickets,
+  Projects, Meetings, Trainings, Procurement) — now renders a dashed dropzone
+  supporting drag-over/drop as well as click-to-choose, with multi-file
+  select, an uploading state, and inline error text; the plain `<input
+  type="file">` remains available (hidden) inside the dropzone label as the
+  fallback control. New `.dropzone` styles added to App.css using the
+  existing theme tokens (dark/light/system all covered). Applies everywhere
+  in the app from this one file — no per-module changes needed.
+  *Done:* `npm run build --workspace apps/web` clean; verified in browser on
+  Procurement PR-0012's Files tab (dropzone renders, themed correctly).
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)
