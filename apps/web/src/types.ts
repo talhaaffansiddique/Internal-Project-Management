@@ -216,9 +216,24 @@ export type ProcurementStatusValue =
   | 'DELIVERED'
   | 'REJECTED'
 
+export interface ProcurementItem {
+  id: string
+  type: 'PRODUCT' | 'SERVICE'
+  description: string
+  quantity: string | null
+}
+
+export interface ProcurementQuotationItem {
+  id: string
+  itemId: string
+  cost: number
+  item: ProcurementItem
+}
+
 export interface ProcurementQuotation {
   id: string
   vendorName: string
+  /** Total = sum of lineItems' cost (AED). */
   amount: number
   quotationDate: string | null
   validUntil: string | null
@@ -229,13 +244,7 @@ export interface ProcurementQuotation {
   status: 'PENDING' | 'SELECTED' | 'REJECTED'
   createdBy: { id: string; fullName: string }
   createdAt: string
-}
-
-export interface ProcurementItem {
-  id: string
-  type: 'PRODUCT' | 'SERVICE'
-  description: string
-  quantity: string | null
+  lineItems: ProcurementQuotationItem[]
 }
 
 export interface ProcurementRequest {

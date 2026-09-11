@@ -1,5 +1,10 @@
 import { type ReactNode, useEffect } from 'react'
 
+/** All monetary figures in the app are AED. */
+export function aed(amount: number): string {
+  return `AED ${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+}
+
 export function Modal({
   title,
   onClose,

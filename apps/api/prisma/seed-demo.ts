@@ -199,6 +199,10 @@ async function reset() {
     await prisma.teamMember.deleteMany({ where: { userId: { in: ids } } });
     await prisma.userRole.deleteMany({ where: { userId: { in: ids } } });
     await prisma.comment.deleteMany({ where: { authorId: { in: ids } } });
+    // Attachments not caught by the entity-scoped loop above (e.g. ones
+    // linked only via a procurementQuotation.attachmentId, or left
+    // unlinked from manual testing) still reference the user — clear them.
+    await prisma.attachment.deleteMany({ where: { uploadedById: { in: ids } } });
     await prisma.user.deleteMany({ where: { id: { in: ids } } });
   }
   await prisma.team.deleteMany({ where: { name: { in: TEAMS.map((t) => t.name) } } });
@@ -757,6 +761,23 @@ async function main() {
     },
   ];
 
+  async function logProcActivity(
+    entityId: string,
+    action: string,
+    summary: string,
+    actorId: string,
+  ) {
+    await prisma.auditLog.create({
+      data: {
+        entityType: EntityType.PROCUREMENT_REQUEST,
+        entityId,
+        action,
+        summary,
+        actorId,
+      },
+    });
+  }
+
   let procCount = 0;
   for (const p of PROCUREMENT) {
     const req = await prisma.procurementRequest.create({
@@ -774,29 +795,68 @@ async function main() {
           })),
         },
       },
+      include: { items: true },
     });
-    await prisma.auditLog.create({
-      data: {
-        entityType: EntityType.PROCUREMENT_REQUEST,
-        entityId: req.id,
-        action: 'CREATED',
-        summary: `submitted procurement request PR-${String(req.number).padStart(4, '0')}`,
-        actorId: userId[p.requester],
-      },
-    });
-    for (const q of p.quotations ?? []) {
-      await prisma.procurementQuotation.create({
-        data: {
-          requestId: req.id,
-          vendorName: q.vendor,
-          amount: q.amount,
-          paymentTerms: q.terms ?? null,
-          deliveryTime: q.delivery ?? null,
-          status: q.selected ? 'SELECTED' : q.rejected ? 'REJECTED' : 'PENDING',
-          createdById: userId['priya.n'],
-        },
-      });
+    const prNumber = `PR-${String(req.number).padStart(4, '0')}`;
+    const assigneeId = p.assignee ? userId[p.assignee] : userId['priya.n'];
+
+    await logProcActivity(
+      req.id,
+      'CREATED',
+      `submitted procurement request ${prNumber}`,
+      userId[p.requester],
+    );
+
+    const pastSupervisor = p.status !== 'SUBMITTED';
+    if (pastSupervisor) {
+      const decision = p.status === 'AWAITING_DIRECTOR' ? 'forward to director' : 'approve to purchasing';
+      await logProcActivity(req.id, 'SUPERVISOR_DECISION', `supervisor decision: ${decision}`, userId['omar.d']);
     }
+
+    const reachedPurchasing = ['WITH_PURCHASING', 'AWAITING_FINAL_APPROVAL', 'ORDERED', 'DELIVERED'].includes(p.status);
+    if (reachedPurchasing && p.quotations?.length) {
+      // Split each quote's lump amount evenly across this request's items so
+      // the demo data has a believable per-item cost breakdown.
+      const lineCost = (amount: number) => Math.round((amount / req.items.length) * 100) / 100;
+      let selectedVendor: string | null = null;
+      for (const q of p.quotations) {
+        const quotation = await prisma.procurementQuotation.create({
+          data: {
+            requestId: req.id,
+            vendorName: q.vendor,
+            amount: q.amount,
+            paymentTerms: q.terms ?? null,
+            deliveryTime: q.delivery ?? null,
+            status: q.selected ? 'SELECTED' : q.rejected ? 'REJECTED' : 'PENDING',
+            createdById: assigneeId,
+            lineItems: {
+              create: req.items.map((it) => ({ itemId: it.id, cost: lineCost(q.amount) })),
+            },
+          },
+        });
+        await logProcActivity(
+          req.id,
+          'QUOTATION_ADDED',
+          `added a quotation from ${q.vendor} — AED ${q.amount.toLocaleString()}`,
+          assigneeId,
+        );
+        if (q.selected) selectedVendor = quotation.vendorName;
+      }
+      if (selectedVendor) {
+        await logProcActivity(req.id, 'QUOTATION_SELECTED', `selected the quotation from ${selectedVendor}`, assigneeId);
+      }
+    }
+
+    if (['AWAITING_FINAL_APPROVAL', 'ORDERED', 'DELIVERED'].includes(p.status)) {
+      await logProcActivity(req.id, 'SENT_FOR_APPROVAL', 'sent the selected quotation for director approval', assigneeId);
+    }
+    if (['ORDERED', 'DELIVERED'].includes(p.status)) {
+      await logProcActivity(req.id, 'FINAL_APPROVAL', 'director final decision: approve', userId['yusuf.a']);
+    }
+    if (p.status === 'DELIVERED') {
+      await logProcActivity(req.id, 'STATUS_CHANGED', 'changed status: ORDERED → DELIVERED', assigneeId);
+    }
+
     procCount += 1;
   }
 

@@ -359,5 +359,41 @@ Each step restates scope + success criteria before code is written.
   actor's name. Verified in-browser: vendor rows show "by {name}", the tab
   bar reads Discussion/To-dos/Files/Activity on a ticket with no collision,
   and Details/Discussion/Files/Activity on Procurement/Training.
+- [x] **CR-8 — Per-item quotation costs (AED), full add/edit modal, seed-data audit gaps**
+  Schema: new `ProcurementQuotationItem` model (quotationId, itemId, cost) —
+  a quotation now breaks its cost down per request item instead of one lump
+  sum; `ProcurementQuotation.amount` is the computed total (migration
+  `20260911140000_procurement_quotation_line_items`, with a backfill that
+  splits every existing quote's amount evenly across its request's items).
+  API: `CreateQuotationDto`/`UpdateQuotationDto` take `items: [{itemId,
+  cost}]` (validated to belong to the request) instead of a flat `amount`;
+  the service computes and stores the total. `DETAIL_INCLUDE` now returns
+  `lineItems` (with each item's type/description/qty) on every quotation.
+  Web: currency is AED everywhere (new `aed()` helper in `ui.tsx`, replacing
+  the old hardcoded `$`). "Add quotation" and "Edit" both now open a
+  dedicated modal (`QuotationFormModal`) listing every item in the request
+  with its own cost field and a live-computed total, plus vendor name,
+  terms, delivery, comments, and an optional quote-document upload — this
+  replaces the old single inline "vendor + amount" row. The no-attachment
+  "view quote" modal now shows the actual per-item breakdown instead of a
+  generic items table.
+  Fixed: `seed-demo.ts` was creating quotations directly via Prisma,
+  bypassing the audit trail entirely — so seeded requests showed no
+  "who added/selected this quotation" in Activity. It now logs the same
+  CREATED → SUPERVISOR_DECISION → QUOTATION_ADDED (×N) → QUOTATION_SELECTED
+  → SENT_FOR_APPROVAL → FINAL_APPROVAL → STATUS_CHANGED chain a real user
+  would produce, matched to each seeded request's stage, and gives every
+  seeded quotation a per-item cost split. Also fixed `reset()` leaving
+  demo-user-owned attachments behind (blocked user deletion on reseed via
+  quotation-document FK) by clearing them before deleting the users.
+  *Done:* `npm run build` clean for both apps; migration applied, both
+  seeds reseeded successfully. Verified via API: created a 3-item quote
+  with per-item costs (500+600+700 → amount 1800, confirmed). Verified in
+  browser: quotations table shows AED amounts and "by {name}"; Add/Edit
+  modals render every item with its own cost input and a live total;
+  Edit correctly pre-fills a real quotation's per-item costs (700/700/700
+  → AED 2,100) and terms; seeded PR-0029's Activity tab now shows the full
+  CREATED → SUPERVISOR_DECISION → QUOTATION_ADDED → QUOTATION_SELECTED
+  chain with names.
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

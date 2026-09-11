@@ -85,9 +85,19 @@ export class ReassignDto {
   @IsOptional() @IsString() comment?: string;
 }
 
+export class QuotationItemCostDto {
+  @IsUUID() itemId!: string;
+  @IsNumber() @Min(0) cost!: number;
+}
+
 export class CreateQuotationDto {
   @IsString() @MinLength(1) vendorName!: string;
-  @IsNumber() @Min(0) amount!: number;
+  /** Per-item cost (AED) for each item this quote covers — the quote's total is the sum of these. */
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => QuotationItemCostDto)
+  items!: QuotationItemCostDto[];
   @IsOptional() @IsDateString() quotationDate?: string;
   @IsOptional() @IsDateString() validUntil?: string;
   @IsOptional() @IsString() paymentTerms?: string;
@@ -98,7 +108,12 @@ export class CreateQuotationDto {
 
 export class UpdateQuotationDto {
   @IsOptional() @IsString() vendorName?: string;
-  @IsOptional() @IsNumber() @Min(0) amount?: number;
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => QuotationItemCostDto)
+  items?: QuotationItemCostDto[];
   @IsOptional() @IsDateString() quotationDate?: string;
   @IsOptional() @IsDateString() validUntil?: string;
   @IsOptional() @IsString() paymentTerms?: string;

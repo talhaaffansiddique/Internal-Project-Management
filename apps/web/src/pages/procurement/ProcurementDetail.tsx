@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
 import { useAuth } from '../../auth'
-import type { ProcurementQuotation, ProcurementRequest, UserLookup } from '../../types'
-import { ErrorText, Modal } from '../../ui'
+import type { ProcurementItem, ProcurementQuotation, ProcurementRequest, UserLookup } from '../../types'
+import { aed, ErrorText, Field, Modal } from '../../ui'
 import { Chatter, EntityAttachments, EntityAudit } from '../../components/entity-panels'
 
 async function uploadQuoteFile(file: File): Promise<string> {
@@ -64,18 +64,7 @@ export default function ProcurementDetail({
   const [tab, setTab] = useState<Tab>('details')
   const [error, setError] = useState<string | null>(null)
   const [comment, setComment] = useState('')
-  const [vendorName, setVendorName] = useState('')
-  const [amount, setAmount] = useState('')
-  const [terms, setTerms] = useState('')
-  const [delivery, setDelivery] = useState('')
-  const [quoteFile, setQuoteFile] = useState<File | null>(null)
-  const [savingQuote, setSavingQuote] = useState(false)
-  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null)
-  const [editVendor, setEditVendor] = useState('')
-  const [editAmount, setEditAmount] = useState('')
-  const [editTerms, setEditTerms] = useState('')
-  const [editDelivery, setEditDelivery] = useState('')
-  const [editFile, setEditFile] = useState<File | null>(null)
+  const [quoteModal, setQuoteModal] = useState<'add' | ProcurementQuotation | null>(null)
   const [viewQuote, setViewQuote] = useState<ProcurementQuotation | null>(null)
   const [purchasingUsers, setPurchasingUsers] = useState<UserLookup[]>([])
   const [showStop, setShowStop] = useState(false)
@@ -122,35 +111,6 @@ export default function ProcurementDetail({
     }
   }
 
-  async function addQuotation() {
-    if (!vendorName.trim() || !amount) return
-    setError(null)
-    setSavingQuote(true)
-    try {
-      const attachmentId = quoteFile ? await uploadQuoteFile(quoteFile) : undefined
-      await api(`/procurement-requests/${id}/quotations`, {
-        method: 'POST',
-        body: JSON.stringify({
-          vendorName,
-          amount: Number(amount),
-          paymentTerms: terms || undefined,
-          deliveryTime: delivery || undefined,
-          attachmentId,
-        }),
-      })
-      setVendorName('')
-      setAmount('')
-      setTerms('')
-      setDelivery('')
-      setQuoteFile(null)
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not add quotation')
-    } finally {
-      setSavingQuote(false)
-    }
-  }
-
   async function selectQuotation(qid: string) {
     await api(`/procurement-quotations/${qid}/select`, { method: 'POST' })
     void load()
@@ -159,39 +119,6 @@ export default function ProcurementDetail({
   async function rejectQuotation(qid: string) {
     await api(`/procurement-quotations/${qid}/reject`, { method: 'POST' })
     void load()
-  }
-
-  function startEditQuote(q: ProcurementQuotation) {
-    setEditingQuoteId(q.id)
-    setEditVendor(q.vendorName)
-    setEditAmount(String(q.amount))
-    setEditTerms(q.paymentTerms ?? '')
-    setEditDelivery(q.deliveryTime ?? '')
-    setEditFile(null)
-  }
-
-  async function saveEditQuote(qid: string) {
-    setError(null)
-    setSavingQuote(true)
-    try {
-      const attachmentId = editFile ? await uploadQuoteFile(editFile) : undefined
-      await api(`/procurement-quotations/${qid}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          vendorName: editVendor,
-          amount: Number(editAmount),
-          paymentTerms: editTerms || undefined,
-          deliveryTime: editDelivery || undefined,
-          attachmentId,
-        }),
-      })
-      setEditingQuoteId(null)
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save the quotation')
-    } finally {
-      setSavingQuote(false)
-    }
   }
 
   function openQuote(q: ProcurementQuotation) {
@@ -473,88 +400,53 @@ export default function ProcurementDetail({
                   </tr>
                 </thead>
                 <tbody>
-                  {r.quotations.map((q) =>
-                    editingQuoteId === q.id ? (
-                      <tr key={q.id}>
-                        <td><input value={editVendor} onChange={(e) => setEditVendor(e.target.value)} style={{ width: '100%' }} /></td>
-                        <td><input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} style={{ width: 80 }} /></td>
-                        <td><input value={editTerms} onChange={(e) => setEditTerms(e.target.value)} style={{ width: '100%' }} /></td>
-                        <td><input value={editDelivery} onChange={(e) => setEditDelivery(e.target.value)} style={{ width: '100%' }} /></td>
-                        <td onClick={(e) => e.stopPropagation()}>
+                  {r.quotations.map((q) => (
+                    <tr key={q.id}>
+                      <td>
+                        <button type="button" className="link-btn" onClick={() => openQuote(q)}>
+                          {q.vendorName}
+                        </button>
+                        <div className="muted small">
+                          by {q.createdBy.fullName}
+                          {q.attachmentId ? ' · 📎 quote attached' : ''}
+                        </div>
+                      </td>
+                      <td>{aed(q.amount)}</td>
+                      <td className="muted small">{q.paymentTerms ?? '—'}</td>
+                      <td className="muted small">{q.deliveryTime ?? '—'}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        {r.statusKey === 'WITH_PURCHASING' && isPurchasing ? (
                           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-                            <input
-                              type="file"
-                              onChange={(e) => setEditFile(e.target.files?.[0] ?? null)}
-                              style={{ width: 90, fontSize: 11 }}
-                              title="Replace the quote document"
-                            />
-                            <button className="btn tiny primary" disabled={savingQuote || !editVendor.trim() || !editAmount} onClick={() => saveEditQuote(q.id)}>
-                              Save
-                            </button>
-                            <button className="btn tiny" onClick={() => setEditingQuoteId(null)}>Cancel</button>
+                            {q.status === 'SELECTED' && <span className="badge ok">selected</span>}
+                            {q.status === 'REJECTED' && <span className="badge muted">rejected</span>}
+                            {q.status === 'PENDING' && <span className="badge muted">pending</span>}
+                            {q.status !== 'SELECTED' && (
+                              <button className="btn tiny" onClick={() => selectQuotation(q.id)}>Select</button>
+                            )}
+                            {q.status !== 'REJECTED' && (
+                              <button className="btn tiny ghost" onClick={() => rejectQuotation(q.id)}>Reject</button>
+                            )}
+                            <button className="btn tiny" onClick={() => setQuoteModal(q)}>Edit</button>
                           </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr key={q.id}>
-                        <td>
-                          <button type="button" className="link-btn" onClick={() => openQuote(q)}>
-                            {q.vendorName}
-                          </button>
-                          <div className="muted small">
-                            by {q.createdBy.fullName}
-                            {q.attachmentId ? ' · 📎 quote attached' : ''}
-                          </div>
-                        </td>
-                        <td>${q.amount.toLocaleString()}</td>
-                        <td className="muted small">{q.paymentTerms ?? '—'}</td>
-                        <td className="muted small">{q.deliveryTime ?? '—'}</td>
-                        <td onClick={(e) => e.stopPropagation()}>
-                          {r.statusKey === 'WITH_PURCHASING' && isPurchasing ? (
-                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-                              {q.status === 'SELECTED' && <span className="badge ok">selected</span>}
-                              {q.status === 'REJECTED' && <span className="badge muted">rejected</span>}
-                              {q.status === 'PENDING' && <span className="badge muted">pending</span>}
-                              {q.status !== 'SELECTED' && (
-                                <button className="btn tiny" onClick={() => selectQuotation(q.id)}>Select</button>
-                              )}
-                              {q.status !== 'REJECTED' && (
-                                <button className="btn tiny ghost" onClick={() => rejectQuotation(q.id)}>Reject</button>
-                              )}
-                              <button className="btn tiny" onClick={() => startEditQuote(q)}>Edit</button>
-                            </div>
-                          ) : q.status === 'SELECTED' ? (
-                            <span className="badge ok">selected</span>
-                          ) : q.status === 'REJECTED' ? (
-                            <span className="badge muted">rejected</span>
-                          ) : (
-                            <span className="badge muted">pending</span>
-                          )}
-                        </td>
-                      </tr>
-                    ),
-                  )}
+                        ) : q.status === 'SELECTED' ? (
+                          <span className="badge ok">selected</span>
+                        ) : q.status === 'REJECTED' ? (
+                          <span className="badge muted">rejected</span>
+                        ) : (
+                          <span className="badge muted">pending</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}
 
             {r.statusKey === 'WITH_PURCHASING' && isPurchasing && (
               <div style={{ marginTop: 12 }}>
-                <div className="inline-form">
-                  <input placeholder="Vendor" value={vendorName} onChange={(e) => setVendorName(e.target.value)} />
-                  <input placeholder="Amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ width: 90 }} />
-                  <input placeholder="Payment terms" value={terms} onChange={(e) => setTerms(e.target.value)} />
-                  <input placeholder="Delivery time" value={delivery} onChange={(e) => setDelivery(e.target.value)} />
-                  <input
-                    type="file"
-                    onChange={(e) => setQuoteFile(e.target.files?.[0] ?? null)}
-                    title="Attach the vendor's quote document (optional)"
-                    style={{ fontSize: 11, width: 130 }}
-                  />
-                  <button className="btn primary" onClick={addQuotation} disabled={savingQuote || !vendorName.trim() || !amount}>
-                    {savingQuote ? 'Adding…' : 'Add quotation'}
-                  </button>
-                </div>
+                <button className="btn primary" onClick={() => setQuoteModal('add')}>
+                  + Add quotation
+                </button>
               </div>
             )}
           </div>
@@ -583,12 +475,32 @@ export default function ProcurementDetail({
           footer={<button className="btn" onClick={() => setViewQuote(null)}>Close</button>}
         >
           <p className="muted small">
-            No document was attached to this quote — here's what was entered, alongside the
-            full list of items being purchased, to help you decide.
+            No document was attached to this quote — here's the per-item cost breakdown that
+            was entered, to help you decide.
           </p>
-          <div className="kv" style={{ marginBottom: 16 }}>
-            <span>Amount</span>
-            <b>${viewQuote.amount.toLocaleString()}</b>
+          <table className="grid">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {viewQuote.lineItems.map((li) => (
+                <tr key={li.id}>
+                  <td className="muted small">{li.item.type === 'PRODUCT' ? 'Product' : 'Service'}</td>
+                  <td>{li.item.description}</td>
+                  <td className="muted small">{li.item.quantity ?? '—'}</td>
+                  <td>{aed(li.cost)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="kv" style={{ marginTop: 16 }}>
+            <span>Total</span>
+            <b>{aed(viewQuote.amount)}</b>
             <span>Payment terms</span>
             <b style={{ fontWeight: 400 }}>{viewQuote.paymentTerms ?? '—'}</b>
             <span>Delivery time</span>
@@ -598,27 +510,164 @@ export default function ProcurementDetail({
             <span>Added by</span>
             <b>{viewQuote.createdBy.fullName}</b>
           </div>
-          <h3>Items this request covers</h3>
-          <table className="grid">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Description</th>
-                <th>Qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              {r.items.map((it) => (
-                <tr key={it.id}>
-                  <td className="muted small">{it.type === 'PRODUCT' ? 'Product' : 'Service'}</td>
-                  <td>{it.description}</td>
-                  <td className="muted small">{it.quantity ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </Modal>
       )}
+
+      {quoteModal && (
+        <QuotationFormModal
+          requestId={id}
+          items={r.items}
+          existing={quoteModal === 'add' ? null : quoteModal}
+          onClose={() => setQuoteModal(null)}
+          onSaved={() => {
+            setQuoteModal(null)
+            void load()
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+function QuotationFormModal({
+  requestId,
+  items,
+  existing,
+  onClose,
+  onSaved,
+}: {
+  requestId: string
+  items: ProcurementItem[]
+  existing: ProcurementQuotation | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [vendorName, setVendorName] = useState(existing?.vendorName ?? '')
+  const [costs, setCosts] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {}
+    for (const it of items) {
+      const line = existing?.lineItems.find((li) => li.itemId === it.id)
+      initial[it.id] = line ? String(line.cost) : ''
+    }
+    return initial
+  })
+  const [terms, setTerms] = useState(existing?.paymentTerms ?? '')
+  const [delivery, setDelivery] = useState(existing?.deliveryTime ?? '')
+  const [comments, setComments] = useState(existing?.comments ?? '')
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const total = items.reduce((sum, it) => sum + (Number(costs[it.id]) || 0), 0)
+  const hasAnyCost = items.some((it) => Number(costs[it.id]) > 0)
+
+  async function save() {
+    if (!vendorName.trim() || !hasAnyCost) return
+    setBusy(true)
+    setError(null)
+    try {
+      const attachmentId = file ? await uploadQuoteFile(file) : undefined
+      const payload = {
+        vendorName: vendorName.trim(),
+        items: items
+          .filter((it) => Number(costs[it.id]) > 0)
+          .map((it) => ({ itemId: it.id, cost: Number(costs[it.id]) })),
+        paymentTerms: terms || undefined,
+        deliveryTime: delivery || undefined,
+        comments: comments || undefined,
+        attachmentId,
+      }
+      if (existing) {
+        await api(`/procurement-quotations/${existing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        })
+      } else {
+        await api(`/procurement-requests/${requestId}/quotations`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
+      }
+      onSaved()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save the quotation')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      title={existing ? `Edit quotation — ${existing.vendorName}` : 'Add a vendor quotation'}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>Cancel</button>
+          <button className="btn primary" onClick={save} disabled={busy || !vendorName.trim() || !hasAnyCost}>
+            {busy ? 'Saving…' : existing ? 'Save changes' : 'Add quotation'}
+          </button>
+        </>
+      }
+    >
+      <Field label="Vendor name">
+        <input value={vendorName} onChange={(e) => setVendorName(e.target.value)} />
+      </Field>
+      <Field
+        label="Cost per item (AED)"
+        hint="Enter what this vendor quoted for each item — the total is calculated automatically. Leave an item blank if this vendor doesn't cover it."
+      >
+        <table className="grid">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>Cost (AED)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((it) => (
+              <tr key={it.id}>
+                <td className="muted small">{it.type === 'PRODUCT' ? 'Product' : 'Service'}</td>
+                <td>{it.description}</td>
+                <td className="muted small">{it.quantity ?? '—'}</td>
+                <td>
+                  <input
+                    type="number"
+                    min={0}
+                    value={costs[it.id]}
+                    onChange={(e) => setCosts((prev) => ({ ...prev, [it.id]: e.target.value }))}
+                    style={{ width: 90 }}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="muted small" style={{ marginTop: 6 }}>
+          Total: <b>{aed(total)}</b>
+        </p>
+      </Field>
+      <Field label="Payment terms" hint="Optional">
+        <input value={terms} onChange={(e) => setTerms(e.target.value)} />
+      </Field>
+      <Field label="Delivery time" hint="Optional">
+        <input value={delivery} onChange={(e) => setDelivery(e.target.value)} />
+      </Field>
+      <Field label="Comments" hint="Optional">
+        <textarea rows={2} value={comments} onChange={(e) => setComments(e.target.value)} />
+      </Field>
+      <Field
+        label="Quote document"
+        hint={
+          existing?.attachmentId
+            ? 'A document is already attached — choosing a new file replaces it.'
+            : "Optional — attach the vendor's quote/RFQ document."
+        }
+      >
+        <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      </Field>
+      <ErrorText>{error}</ErrorText>
+    </Modal>
   )
 }

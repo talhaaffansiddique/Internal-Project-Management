@@ -669,7 +669,8 @@ model ProcurementItem {
   quantity    String?
   createdAt   DateTime        @default(now())
 
-  request ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  request      ProcurementRequest       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  quotedCosts  ProcurementQuotationItem[]
 
   @@index([requestId])
   @@map("procurement_items")
@@ -679,6 +680,7 @@ model ProcurementQuotation {
   id             String          @id @default(uuid())
   requestId      String
   vendorName     String
+  /// Total quote amount — the sum of its per-item costs (AED).
   amount         Float
   quotationDate  DateTime?
   validUntil     DateTime?
@@ -691,9 +693,28 @@ model ProcurementQuotation {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  request   ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  createdBy User               @relation(fields: [createdById], references: [id])
+  request   ProcurementRequest         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdBy User                       @relation(fields: [createdById], references: [id])
+  lineItems ProcurementQuotationItem[]
 
   @@index([requestId])
   @@map("procurement_quotations")
+}
+
+/// Per-item cost (AED) a vendor quoted within one quotation — lets
+/// Purchasing/Finance break a quote down across the request's items
+/// instead of a single lump sum.
+model ProcurementQuotationItem {
+  id          String   @id @default(uuid())
+  quotationId String
+  itemId      String
+  cost        Float
+  createdAt   DateTime @default(now())
+
+  quotation ProcurementQuotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  item      ProcurementItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([quotationId, itemId])
+  @@index([quotationId])
+  @@map("procurement_quotation_items")
 }

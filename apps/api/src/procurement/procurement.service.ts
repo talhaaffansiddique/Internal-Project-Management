@@ -51,7 +51,10 @@ const DETAIL_INCLUDE = {
   items: { orderBy: { createdAt: 'asc' } },
   quotations: {
     orderBy: { createdAt: 'asc' },
-    include: { createdBy: { select: { id: true, fullName: true } } },
+    include: {
+      createdBy: { select: { id: true, fullName: true } },
+      lineItems: { include: { item: true } },
+    },
   },
 } satisfies Prisma.ProcurementRequestInclude;
 
@@ -437,6 +440,21 @@ export class ProcurementService {
     return updated;
   }
 
+  /** Every itemId in a per-item cost breakdown must belong to the request being quoted. */
+  private assertItemsBelongToRequest(
+    items: { itemId: string }[],
+    request: { items: { id: string }[] },
+  ) {
+    const validIds = new Set(request.items.map((i) => i.id));
+    for (const it of items) {
+      if (!validIds.has(it.itemId)) {
+        throw new BadRequestException(
+          'One of the quoted items does not belong to this request',
+        );
+      }
+    }
+  }
+
   async addQuotation(
     id: string,
     userId: string,
@@ -445,11 +463,13 @@ export class ProcurementService {
   ) {
     const r = await this.load(id);
     this.assertPurchasingActor(r, ProcurementStatus.WITH_PURCHASING, userId, roles);
+    this.assertItemsBelongToRequest(dto.items, r);
+    const amount = dto.items.reduce((sum, it) => sum + it.cost, 0);
     await this.prisma.procurementQuotation.create({
       data: {
         requestId: id,
         vendorName: dto.vendorName.trim(),
-        amount: dto.amount,
+        amount,
         quotationDate: dto.quotationDate ? new Date(dto.quotationDate) : null,
         validUntil: dto.validUntil ? new Date(dto.validUntil) : null,
         paymentTerms: dto.paymentTerms?.trim() || null,
@@ -457,13 +477,16 @@ export class ProcurementService {
         comments: dto.comments?.trim() || null,
         attachmentId: dto.attachmentId ?? null,
         createdById: userId,
+        lineItems: {
+          create: dto.items.map((it) => ({ itemId: it.itemId, cost: it.cost })),
+        },
       },
     });
     await this.audit.record({
       entityType: EntityType.PROCUREMENT_REQUEST,
       entityId: id,
       action: 'QUOTATION_ADDED',
-      summary: `added a quotation from ${dto.vendorName.trim()}`,
+      summary: `added a quotation from ${dto.vendorName.trim()} — AED ${amount.toLocaleString()}`,
       actorId: userId,
     });
     return this.load(id);
@@ -477,7 +500,7 @@ export class ProcurementService {
   ) {
     const q = await this.prisma.procurementQuotation.findUnique({
       where: { id: quotationId },
-      include: { request: true },
+      include: { request: { include: { items: true } } },
     });
     if (!q) throw new NotFoundException('Quotation not found');
     this.assertPurchasingActor(
@@ -486,17 +509,29 @@ export class ProcurementService {
       userId,
       roles,
     );
+    if (dto.items) this.assertItemsBelongToRequest(dto.items, q.request);
+    const amount = dto.items
+      ? dto.items.reduce((sum, it) => sum + it.cost, 0)
+      : undefined;
     await this.prisma.procurementQuotation.update({
       where: { id: quotationId },
       data: {
         vendorName: dto.vendorName?.trim(),
-        amount: dto.amount,
+        amount,
         quotationDate: dto.quotationDate ? new Date(dto.quotationDate) : undefined,
         validUntil: dto.validUntil ? new Date(dto.validUntil) : undefined,
         paymentTerms: dto.paymentTerms?.trim(),
         deliveryTime: dto.deliveryTime?.trim(),
         comments: dto.comments?.trim(),
         attachmentId: dto.attachmentId,
+        ...(dto.items
+          ? {
+              lineItems: {
+                deleteMany: {},
+                create: dto.items.map((it) => ({ itemId: it.itemId, cost: it.cost })),
+              },
+            }
+          : {}),
       },
     });
     await this.audit.record({
