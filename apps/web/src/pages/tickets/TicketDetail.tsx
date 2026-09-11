@@ -24,6 +24,12 @@ function ticketNo(n: number) {
 }
 
 type Tab = 'discussion' | 'activity' | 'files' | 'history'
+const TAB_LABEL: Record<Tab, string> = {
+  discussion: 'Discussion',
+  activity: 'To-dos',
+  files: 'Files',
+  history: 'Activity',
+}
 
 export default function TicketDetail({
   id,
@@ -237,7 +243,7 @@ export default function TicketDetail({
                 className={`tab ${tab === t ? 'active' : ''}`}
                 onClick={() => setTab(t)}
               >
-                {t[0].toUpperCase() + t.slice(1)}
+                {TAB_LABEL[t]}
               </button>
             ))}
           </div>

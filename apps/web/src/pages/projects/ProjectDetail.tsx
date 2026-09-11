@@ -29,6 +29,13 @@ const TASK_STATUS = TASK_GROUPS.map((g) => g.key)
 const projectNo = (n: number) => `PRJ-${String(n).padStart(4, '0')}`
 
 type Tab = 'tasks' | 'discussion' | 'activity' | 'files' | 'history'
+const TAB_LABEL: Record<Tab, string> = {
+  tasks: 'Tasks',
+  discussion: 'Discussion',
+  activity: 'To-dos',
+  files: 'Files',
+  history: 'Activity',
+}
 
 export default function ProjectDetail({
   id,
@@ -212,7 +219,7 @@ export default function ProjectDetail({
                   className={`tab ${tab === t ? 'active' : ''}`}
                   onClick={() => setTab(t)}
                 >
-                  {t[0].toUpperCase() + t.slice(1)}
+                  {TAB_LABEL[t]}
                 </button>
               ),
             )}

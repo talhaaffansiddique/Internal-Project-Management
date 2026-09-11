@@ -496,7 +496,42 @@ export class ProcurementService {
         paymentTerms: dto.paymentTerms?.trim(),
         deliveryTime: dto.deliveryTime?.trim(),
         comments: dto.comments?.trim(),
+        attachmentId: dto.attachmentId,
       },
+    });
+    await this.audit.record({
+      entityType: EntityType.PROCUREMENT_REQUEST,
+      entityId: q.requestId,
+      action: 'QUOTATION_EDITED',
+      summary: `edited the quotation from ${dto.vendorName?.trim() || q.vendorName}`,
+      actorId: userId,
+    });
+    return this.load(q.requestId);
+  }
+
+  /** Explicitly reject a quotation without needing to select a different one. */
+  async rejectQuotation(quotationId: string, userId: string, roles: string[]) {
+    const q = await this.prisma.procurementQuotation.findUnique({
+      where: { id: quotationId },
+      include: { request: true },
+    });
+    if (!q) throw new NotFoundException('Quotation not found');
+    this.assertPurchasingActor(
+      q.request,
+      ProcurementStatus.WITH_PURCHASING,
+      userId,
+      roles,
+    );
+    await this.prisma.procurementQuotation.update({
+      where: { id: quotationId },
+      data: { status: QuotationStatus.REJECTED },
+    });
+    await this.audit.record({
+      entityType: EntityType.PROCUREMENT_REQUEST,
+      entityId: q.requestId,
+      action: 'QUOTATION_REJECTED',
+      summary: `rejected the quotation from ${q.vendorName}`,
+      actorId: userId,
     });
     return this.load(q.requestId);
   }

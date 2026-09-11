@@ -1,9 +1,22 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
 import { useAuth } from '../../auth'
-import type { ProcurementRequest, UserLookup } from '../../types'
-import { ErrorText } from '../../ui'
+import type { ProcurementQuotation, ProcurementRequest, UserLookup } from '../../types'
+import { ErrorText, Modal } from '../../ui'
 import { Chatter, EntityAttachments, EntityAudit } from '../../components/entity-panels'
+
+async function uploadQuoteFile(file: File): Promise<string> {
+  const fd = new FormData()
+  fd.append('file', file)
+  const res = await fetch('/api/v1/attachments', {
+    method: 'POST',
+    body: fd,
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error('Could not upload the quote file')
+  const created = (await res.json()) as { id: string }
+  return created.id
+}
 
 const STATUS_LABEL: Record<string, string> = {
   SUBMITTED: 'Awaiting Supervisor',
@@ -27,6 +40,12 @@ const textAreaStyle = {
 const STOPPABLE_STAGES = ['WITH_PURCHASING', 'AWAITING_FINAL_APPROVAL', 'ORDERED']
 
 type Tab = 'details' | 'discussion' | 'files' | 'history'
+const TAB_LABEL: Record<Tab, string> = {
+  details: 'Details',
+  discussion: 'Discussion',
+  files: 'Files',
+  history: 'Activity',
+}
 
 export default function ProcurementDetail({
   id,
@@ -49,6 +68,15 @@ export default function ProcurementDetail({
   const [amount, setAmount] = useState('')
   const [terms, setTerms] = useState('')
   const [delivery, setDelivery] = useState('')
+  const [quoteFile, setQuoteFile] = useState<File | null>(null)
+  const [savingQuote, setSavingQuote] = useState(false)
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null)
+  const [editVendor, setEditVendor] = useState('')
+  const [editAmount, setEditAmount] = useState('')
+  const [editTerms, setEditTerms] = useState('')
+  const [editDelivery, setEditDelivery] = useState('')
+  const [editFile, setEditFile] = useState<File | null>(null)
+  const [viewQuote, setViewQuote] = useState<ProcurementQuotation | null>(null)
   const [purchasingUsers, setPurchasingUsers] = useState<UserLookup[]>([])
   const [showStop, setShowStop] = useState(false)
   const [showReassign, setShowReassign] = useState(false)
@@ -97,7 +125,9 @@ export default function ProcurementDetail({
   async function addQuotation() {
     if (!vendorName.trim() || !amount) return
     setError(null)
+    setSavingQuote(true)
     try {
+      const attachmentId = quoteFile ? await uploadQuoteFile(quoteFile) : undefined
       await api(`/procurement-requests/${id}/quotations`, {
         method: 'POST',
         body: JSON.stringify({
@@ -105,21 +135,71 @@ export default function ProcurementDetail({
           amount: Number(amount),
           paymentTerms: terms || undefined,
           deliveryTime: delivery || undefined,
+          attachmentId,
         }),
       })
       setVendorName('')
       setAmount('')
       setTerms('')
       setDelivery('')
+      setQuoteFile(null)
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not add quotation')
+    } finally {
+      setSavingQuote(false)
     }
   }
 
   async function selectQuotation(qid: string) {
     await api(`/procurement-quotations/${qid}/select`, { method: 'POST' })
     void load()
+  }
+
+  async function rejectQuotation(qid: string) {
+    await api(`/procurement-quotations/${qid}/reject`, { method: 'POST' })
+    void load()
+  }
+
+  function startEditQuote(q: ProcurementQuotation) {
+    setEditingQuoteId(q.id)
+    setEditVendor(q.vendorName)
+    setEditAmount(String(q.amount))
+    setEditTerms(q.paymentTerms ?? '')
+    setEditDelivery(q.deliveryTime ?? '')
+    setEditFile(null)
+  }
+
+  async function saveEditQuote(qid: string) {
+    setError(null)
+    setSavingQuote(true)
+    try {
+      const attachmentId = editFile ? await uploadQuoteFile(editFile) : undefined
+      await api(`/procurement-quotations/${qid}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          vendorName: editVendor,
+          amount: Number(editAmount),
+          paymentTerms: editTerms || undefined,
+          deliveryTime: editDelivery || undefined,
+          attachmentId,
+        }),
+      })
+      setEditingQuoteId(null)
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save the quotation')
+    } finally {
+      setSavingQuote(false)
+    }
+  }
+
+  function openQuote(q: ProcurementQuotation) {
+    if (q.attachmentId) {
+      window.open(`/api/v1/attachments/${q.attachmentId}/download`, '_blank')
+    } else {
+      setViewQuote(q)
+    }
   }
 
   async function stopPurchase() {
@@ -340,7 +420,7 @@ export default function ProcurementDetail({
             className={`tab ${tab === x ? 'active' : ''}`}
             onClick={() => setTab(x)}
           >
-            {x[0].toUpperCase() + x.slice(1)}
+            {TAB_LABEL[x]}
           </button>
         ))}
       </div>
@@ -393,27 +473,67 @@ export default function ProcurementDetail({
                   </tr>
                 </thead>
                 <tbody>
-                  {r.quotations.map((q) => (
-                    <tr key={q.id}>
-                      <td>{q.vendorName}</td>
-                      <td>${q.amount.toLocaleString()}</td>
-                      <td className="muted small">{q.paymentTerms ?? '—'}</td>
-                      <td className="muted small">{q.deliveryTime ?? '—'}</td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        {q.status === 'SELECTED' ? (
-                          <span className="badge ok">selected</span>
-                        ) : q.status === 'REJECTED' ? (
-                          <span className="badge muted">rejected</span>
-                        ) : r.statusKey === 'WITH_PURCHASING' && isPurchasing ? (
-                          <button className="btn tiny" onClick={() => selectQuotation(q.id)}>
-                            Select
+                  {r.quotations.map((q) =>
+                    editingQuoteId === q.id ? (
+                      <tr key={q.id}>
+                        <td><input value={editVendor} onChange={(e) => setEditVendor(e.target.value)} style={{ width: '100%' }} /></td>
+                        <td><input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} style={{ width: 80 }} /></td>
+                        <td><input value={editTerms} onChange={(e) => setEditTerms(e.target.value)} style={{ width: '100%' }} /></td>
+                        <td><input value={editDelivery} onChange={(e) => setEditDelivery(e.target.value)} style={{ width: '100%' }} /></td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <input
+                              type="file"
+                              onChange={(e) => setEditFile(e.target.files?.[0] ?? null)}
+                              style={{ width: 90, fontSize: 11 }}
+                              title="Replace the quote document"
+                            />
+                            <button className="btn tiny primary" disabled={savingQuote || !editVendor.trim() || !editAmount} onClick={() => saveEditQuote(q.id)}>
+                              Save
+                            </button>
+                            <button className="btn tiny" onClick={() => setEditingQuoteId(null)}>Cancel</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={q.id}>
+                        <td>
+                          <button type="button" className="link-btn" onClick={() => openQuote(q)}>
+                            {q.vendorName}
                           </button>
-                        ) : (
-                          <span className="badge muted">pending</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                          <div className="muted small">
+                            by {q.createdBy.fullName}
+                            {q.attachmentId ? ' · 📎 quote attached' : ''}
+                          </div>
+                        </td>
+                        <td>${q.amount.toLocaleString()}</td>
+                        <td className="muted small">{q.paymentTerms ?? '—'}</td>
+                        <td className="muted small">{q.deliveryTime ?? '—'}</td>
+                        <td onClick={(e) => e.stopPropagation()}>
+                          {r.statusKey === 'WITH_PURCHASING' && isPurchasing ? (
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                              {q.status === 'SELECTED' && <span className="badge ok">selected</span>}
+                              {q.status === 'REJECTED' && <span className="badge muted">rejected</span>}
+                              {q.status === 'PENDING' && <span className="badge muted">pending</span>}
+                              {q.status !== 'SELECTED' && (
+                                <button className="btn tiny" onClick={() => selectQuotation(q.id)}>Select</button>
+                              )}
+                              {q.status !== 'REJECTED' && (
+                                <button className="btn tiny ghost" onClick={() => rejectQuotation(q.id)}>Reject</button>
+                              )}
+                              <button className="btn tiny" onClick={() => startEditQuote(q)}>Edit</button>
+                            </div>
+                          ) : q.status === 'SELECTED' ? (
+                            <span className="badge ok">selected</span>
+                          ) : q.status === 'REJECTED' ? (
+                            <span className="badge muted">rejected</span>
+                          ) : (
+                            <span className="badge muted">pending</span>
+                          )}
+                        </td>
+                      </tr>
+                    ),
+                  )}
                 </tbody>
               </table>
             )}
@@ -425,8 +545,14 @@ export default function ProcurementDetail({
                   <input placeholder="Amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ width: 90 }} />
                   <input placeholder="Payment terms" value={terms} onChange={(e) => setTerms(e.target.value)} />
                   <input placeholder="Delivery time" value={delivery} onChange={(e) => setDelivery(e.target.value)} />
-                  <button className="btn primary" onClick={addQuotation} disabled={!vendorName.trim() || !amount}>
-                    Add quotation
+                  <input
+                    type="file"
+                    onChange={(e) => setQuoteFile(e.target.files?.[0] ?? null)}
+                    title="Attach the vendor's quote document (optional)"
+                    style={{ fontSize: 11, width: 130 }}
+                  />
+                  <button className="btn primary" onClick={addQuotation} disabled={savingQuote || !vendorName.trim() || !amount}>
+                    {savingQuote ? 'Adding…' : 'Add quotation'}
                   </button>
                 </div>
               </div>
@@ -448,6 +574,50 @@ export default function ProcurementDetail({
         <div style={{ marginTop: 14 }}>
           <EntityAudit entityType="procurement-requests" entityId={id} />
         </div>
+      )}
+
+      {viewQuote && (
+        <Modal
+          title={`Quotation from ${viewQuote.vendorName}`}
+          onClose={() => setViewQuote(null)}
+          footer={<button className="btn" onClick={() => setViewQuote(null)}>Close</button>}
+        >
+          <p className="muted small">
+            No document was attached to this quote — here's what was entered, alongside the
+            full list of items being purchased, to help you decide.
+          </p>
+          <div className="kv" style={{ marginBottom: 16 }}>
+            <span>Amount</span>
+            <b>${viewQuote.amount.toLocaleString()}</b>
+            <span>Payment terms</span>
+            <b style={{ fontWeight: 400 }}>{viewQuote.paymentTerms ?? '—'}</b>
+            <span>Delivery time</span>
+            <b style={{ fontWeight: 400 }}>{viewQuote.deliveryTime ?? '—'}</b>
+            <span>Comments</span>
+            <b style={{ fontWeight: 400 }}>{viewQuote.comments ?? '—'}</b>
+            <span>Added by</span>
+            <b>{viewQuote.createdBy.fullName}</b>
+          </div>
+          <h3>Items this request covers</h3>
+          <table className="grid">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.items.map((it) => (
+                <tr key={it.id}>
+                  <td className="muted small">{it.type === 'PRODUCT' ? 'Product' : 'Service'}</td>
+                  <td>{it.description}</td>
+                  <td className="muted small">{it.quantity ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Modal>
       )}
     </div>
   )

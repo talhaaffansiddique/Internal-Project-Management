@@ -326,5 +326,38 @@ Each step restates scope + success criteria before code is written.
   seeded forklift request: Final-approval bar and Director-oversight panel
   render correctly, Re-assign dropdown populates from the Purchasing/Finance
   role.
+- [x] **CR-7 — Quotation authorship/attachments, "History"→"Activity" rename, editable select/reject**
+  - Every quotation add/edit/select/reject now writes to the audit log with
+    the actor's name (`QUOTATION_ADDED` already did; added `QUOTATION_EDITED`
+    and a new explicit `QUOTATION_REJECTED`) — all visible on the Activity
+    tab, and the quotations table itself now shows "by {who added it}"
+    under each vendor name.
+  - Quotations can now carry an attached document: the "Add quotation" form
+    and the inline "Edit" form both take an optional file, uploaded via the
+    existing attachments pipeline and stored as `attachmentId` on the
+    quotation (`UpdateQuotationDto` gained `attachmentId` to match
+    `CreateQuotationDto`).
+  - Clicking a vendor's name opens that quotation's actual document
+    (`/attachments/:id/download`) if one was attached; otherwise it opens a
+    modal with the quotation's full details plus the request's items table,
+    so there's still enough context to decide without a document.
+  - Select/Reject are now both always available (not just one-shot) for any
+    quotation while a request is WITH_PURCHASING — a SELECTED quote can be
+    Rejected, a REJECTED one can be re-Selected, freely, right up until
+    "Send for director approval" locks the stage. Added a matching
+    `POST /procurement-quotations/:id/reject` endpoint (explicit reject,
+    not just "select a different one").
+  - Renamed the "History" tab to **"Activity"** everywhere it appears
+    (Procurement, Tickets, Projects, Training). Tickets and Projects already
+    had an unrelated "Activity" tab (todo-style follow-ups with due dates) —
+    that one is now labeled **"To-dos"** to avoid a naming collision; the
+    audit-trail tab (what used to be "History") takes the "Activity" name.
+  *Done:* `npm run build` clean for both apps. Verified via API: created a
+  request, added one quotation with an attached file and one without,
+  selected one → rejected it explicitly → re-selected the other → edited a
+  quotation's vendor name — every step appended to the audit log with the
+  actor's name. Verified in-browser: vendor rows show "by {name}", the tab
+  bar reads Discussion/To-dos/Files/Activity on a ticket with no collision,
+  and Details/Discussion/Files/Activity on Procurement/Training.
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

@@ -32,6 +32,11 @@ const ACK_LABEL: Record<string, string> = {
 }
 
 type Tab = 'details' | 'discussion' | 'history'
+const TAB_LABEL: Record<Tab, string> = {
+  details: 'Details',
+  discussion: 'Discussion',
+  history: 'Activity',
+}
 
 export default function TrainingDetail({
   id,
@@ -211,7 +216,7 @@ export default function TrainingDetail({
             className={`tab ${tab === x ? 'active' : ''}`}
             onClick={() => setTab(x)}
           >
-            {x[0].toUpperCase() + x.slice(1)}
+            {TAB_LABEL[x]}
           </button>
         ))}
       </div>

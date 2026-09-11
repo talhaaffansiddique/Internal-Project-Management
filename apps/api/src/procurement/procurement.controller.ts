@@ -162,6 +162,16 @@ export class ProcurementController {
     return this.procurement.selectQuotation(id, userId, roles);
   }
 
+  @Post('procurement-quotations/:id/reject')
+  @Roles()
+  rejectQuotation(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoles() roles: string[],
+  ) {
+    return this.procurement.rejectQuotation(id, userId, roles);
+  }
+
   @Post('procurement-requests/:id/send-for-approval')
   @Roles()
   sendForApproval(

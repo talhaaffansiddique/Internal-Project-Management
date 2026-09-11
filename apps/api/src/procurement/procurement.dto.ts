@@ -104,4 +104,5 @@ export class UpdateQuotationDto {
   @IsOptional() @IsString() paymentTerms?: string;
   @IsOptional() @IsString() deliveryTime?: string;
   @IsOptional() @IsString() comments?: string;
+  @IsOptional() @IsUUID() attachmentId?: string;
 }
