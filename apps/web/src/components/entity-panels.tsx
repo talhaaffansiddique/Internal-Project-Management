@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useRef, useState, type DragEvent, type MouseEvent } from 'react'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../ui'
+import { celebrateFrom } from '../celebrate'
 import type { UserLookup } from '../types'
 
 /* ------------------------------------------------------------------ */
@@ -163,7 +164,10 @@ export function EntityActivities({
     await load()
   }
 
-  async function complete(id: string) {
+  async function complete(id: string, e: MouseEvent<HTMLButtonElement>) {
+    const li = e.currentTarget.closest('li')
+    celebrateFrom(e.currentTarget)
+    li?.classList.add('celebrating')
     await api(`/activities/${id}/complete`, { method: 'POST' })
     await load()
   }
@@ -183,7 +187,7 @@ export function EntityActivities({
               </span>
             </span>
             {a.status === 'OPEN' ? (
-              <button className="btn tiny" onClick={() => complete(a.id)}>
+              <button className="btn tiny" onClick={(e) => complete(a.id, e)}>
                 Done
               </button>
             ) : (

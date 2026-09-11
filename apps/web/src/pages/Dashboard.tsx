@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
+import { useTheme } from '../theme'
 
 const STATUS_LABEL: Record<string, string> = {
   new: 'New',
@@ -48,6 +49,12 @@ export default function Dashboard({
 
   if (!d) return <p className="muted">Loading…</p>
   const c = d.counts
+  // A shared scale so each card's ring/bar/bloom reads relative to its
+  // siblings, not an arbitrary fixed ceiling.
+  const maxVal = Math.max(
+    1,
+    c.open, c.in_progress, c.waiting_for_user, c.unassigned, c.resolved, c.overdueActivities,
+  )
 
   return (
     <div>
@@ -61,18 +68,20 @@ export default function Dashboard({
       </div>
 
       <div className="cards">
-        <Stat label="Open tickets" value={c.open} />
-        <Stat label="In progress" value={c.in_progress} />
-        <Stat label="Waiting for user" value={c.waiting_for_user} />
+        <Stat label="Open tickets" value={c.open} max={maxVal} />
+        <Stat label="In progress" value={c.in_progress} max={maxVal} />
+        <Stat label="Waiting for user" value={c.waiting_for_user} max={maxVal} />
         <Stat
           label="Unassigned"
           value={c.unassigned}
+          max={maxVal}
           tone={c.unassigned ? 'warn' : undefined}
         />
-        <Stat label="Resolved" value={c.resolved} />
+        <Stat label="Resolved" value={c.resolved} max={maxVal} />
         <Stat
           label="Overdue activities"
           value={c.overdueActivities}
+          max={maxVal}
           tone={c.overdueActivities ? 'bad' : undefined}
         />
       </div>
@@ -117,12 +126,61 @@ export default function Dashboard({
 function Stat({
   label,
   value,
+  max,
   tone,
 }: {
   label: string
   value: number
+  max: number
   tone?: 'warn' | 'bad'
 }) {
+  const { skin } = useTheme()
+  const pct = Math.max(4, Math.min(100, Math.round((value / max) * 100)))
+  const toneVar = tone === 'bad' ? 'var(--danger)' : tone === 'warn' ? '#d97706' : 'var(--primary)'
+
+  if (skin === 'harbor') {
+    const r = 17
+    const c = 2 * Math.PI * r
+    return (
+      <div className="stat stat-ring">
+        <svg width="44" height="44" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r={r} fill="none" stroke="var(--surface-3)" strokeWidth="5" />
+          <circle
+            cx="22" cy="22" r={r} fill="none" stroke={toneVar} strokeWidth="5" strokeLinecap="round"
+            strokeDasharray={c} strokeDashoffset={c - (c * pct) / 100}
+            transform="rotate(-90 22 22)" style={{ transition: 'stroke-dashoffset .6s ease' }}
+          />
+        </svg>
+        <div>
+          <div className="stat-value mono" style={{ color: toneVar }}>{value}</div>
+          <div className="stat-label">{label}</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (skin === 'foundry') {
+    return (
+      <div className="stat stat-bar">
+        <div className="stat-label">{label}</div>
+        <div className="stat-value mono" style={{ color: toneVar }}>{String(value).padStart(2, '0')}</div>
+        <div className="stat-bar-track">
+          <span style={{ width: `${pct}%`, background: toneVar }} />
+        </div>
+      </div>
+    )
+  }
+
+  if (skin === 'meadow') {
+    return (
+      <div className="stat stat-bloom">
+        <div className="stat-label">{label}</div>
+        <div className="stat-value" style={{ color: toneVar }}>{value}</div>
+        <div className="bloom"><span key={pct} style={{ width: `${pct}%`, background: toneVar }} /></div>
+      </div>
+    )
+  }
+
   return (
     <div className="stat">
       <div className="stat-label">{label}</div>

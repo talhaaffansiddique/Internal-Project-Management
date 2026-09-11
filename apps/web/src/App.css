@@ -647,6 +647,15 @@ table.grid tbody tr:hover { background: var(--surface-2); }
   padding: 7px 0; border-bottom: 1px dashed var(--border); font-size: 13px;
 }
 .mini-list li:last-child { border-bottom: none; }
+.mini-list li.celebrating { animation: task-pop .5s ease; }
+@keyframes task-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.015); background: var(--primary-soft); border-radius: 8px; }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mini-list li.celebrating { animation: none; }
+}
 .inline-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .inline-form input, .inline-form select {
   border: 1px solid var(--border-strong); border-radius: 7px; padding: 6px 8px; font-size: 12.5px;
@@ -697,6 +706,33 @@ table.grid tbody tr:hover { background: var(--surface-2); }
 .stat-value { font-size: 24px; font-weight: 700; margin-top: 3px; }
 .stat-value.warn { color: #d97706; }
 .stat-value.bad { color: var(--danger); }
+
+/* Harbor Slate stat: progress ring beside the number */
+.stat-ring { display: flex; align-items: center; gap: 12px; }
+.stat-ring .stat-value { font-size: 21px; margin-top: 0; }
+.stat-ring .stat-label { margin-top: 2px; }
+
+/* Foundry stat: flat industrial bar under the number */
+.stat-bar .stat-value { font-size: 27px; }
+.stat-bar-track {
+  margin-top: 10px; height: 5px; background: var(--surface-3); border-radius: 2px; overflow: hidden;
+}
+.stat-bar-track > span {
+  display: block; height: 100%; transition: width .6s ease;
+}
+
+/* Meadow stat: bloom bar that animates open under the number */
+.stat-bloom .bloom {
+  margin-top: 10px; height: 6px; border-radius: 6px; background: var(--surface-3); overflow: hidden;
+}
+.stat-bloom .bloom > span {
+  display: block; height: 100%; border-radius: 6px; transform-origin: left;
+  animation: stat-bloom-in 1s cubic-bezier(.2,.9,.2,1) both;
+}
+@keyframes stat-bloom-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .stat-bloom .bloom > span { animation: none; }
+}
 
 .panel {
   background: var(--surface); border: 1px solid var(--border); border-radius: 10px;

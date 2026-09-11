@@ -432,5 +432,25 @@ Each step restates scope + success criteria before code is written.
   applies under the Light toggle; confirmed the rest of the UI (tables,
   badges, primary buttons) re-themes automatically on the Procurement
   list purely from the token swap. Reset to Default before finishing.
+- [x] **CR-10 — Skins change component design and motion, not just color**
+  Follow-up to CR-9: a palette+font swap alone didn't read as a real
+  appearance change. Two concrete things now differ by skin, not just tint:
+  Dashboard stat cards (`pages/Dashboard.tsx`) render a genuinely different
+  widget per skin — Harbor Slate gets an SVG progress ring, Foundry gets a
+  flat industrial bar under mono digits, Meadow gets an animated "bloom"
+  bar, Default is unchanged — each sized relative to its sibling cards'
+  values (not an arbitrary fixed scale, and not fabricated history).
+  New shared `celebrate.ts`: a canvas particle-burst triggered when a
+  to-do is marked "Done" (`EntityActivities`, shared by Tickets/Projects),
+  reading the *live* skin + theme tokens at the moment it fires, so the
+  same call site produces soft dots (Default/Harbor), angular amber
+  slivers (Foundry), or drifting clay leaves (Meadow) — plus a brief
+  highlight-and-settle animation on the completed row. Respects
+  `prefers-reduced-motion`.
+  *Done:* `npm run build` clean. Verified in-browser: Dashboard cards
+  render the ring (Harbor) and flat bar (Foundry) correctly, scaled
+  relative to each other; completing a to-do under the Foundry skin fired
+  the amber sliver burst with the row highlight, confirmed via screenshot
+  mid-animation. Reset company skin to Default before finishing.
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)
