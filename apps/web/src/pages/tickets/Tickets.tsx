@@ -141,7 +141,7 @@ export default function Tickets({
           <tbody>
             {rows.map((t) => (
               <tr key={t.id} onClick={() => setOpenId(t.id)}>
-                <td><b>{ticketNo(t.number)}</b></td>
+                <td><b className="mono">{ticketNo(t.number)}</b></td>
                 <td>
                   {t.subject}
                   {t.visibility === 'TEAM' && (
@@ -157,7 +157,7 @@ export default function Tickets({
                   {new Date(t.createdAt).toLocaleDateString()}
                 </td>
                 <td>
-                  <span className="badge warn">
+                  <span className={`badge status-${t.statusKey}`}>
                     {STATUS_LABEL[t.statusKey] ?? t.statusKey}
                   </span>
                 </td>

@@ -173,7 +173,7 @@ export default function Projects({
           <tbody>
             {rows.map((p) => (
               <tr key={p.id} onClick={() => setOpenId(p.id)}>
-                <td><b>{projectNo(p.number)}</b></td>
+                <td><b className="mono">{projectNo(p.number)}</b></td>
                 <td>{p.title}</td>
                 <td>{p.owner.fullName}</td>
                 <td>

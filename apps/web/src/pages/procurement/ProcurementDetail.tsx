@@ -179,7 +179,7 @@ export default function ProcurementDetail({
       <div className="page-head" style={{ marginTop: 14 }}>
         <div>
           <h1>
-            <span className="muted">{prNo(r.number)}</span>{' '}
+            <span className="muted mono">{prNo(r.number)}</span>{' '}
             {r.items[0]?.description ?? '—'}
             {r.items.length > 1 && (
               <span className="muted small"> +{r.items.length - 1} more</span>
@@ -199,7 +199,7 @@ export default function ProcurementDetail({
       </div>
 
       <div className="status-bar">
-        <span className="badge warn">{STATUS_LABEL[r.statusKey]}</span>
+        <span className={`badge status-${r.statusKey.toLowerCase()}`}>{STATUS_LABEL[r.statusKey]}</span>
       </div>
 
       {r.statusKey === 'SUBMITTED' && isSupervisor && (

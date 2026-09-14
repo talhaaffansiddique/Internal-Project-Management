@@ -99,7 +99,7 @@ export default function MeetingDetail({
       <div className="page-head" style={{ marginTop: 14 }}>
         <div>
           <h1>
-            <span className="muted">{meetingNo(m.number)}</span> {m.title}
+            <span className="muted mono">{meetingNo(m.number)}</span> {m.title}
           </h1>
           <p className="muted small">
             {new Date(m.startsAt).toLocaleString()} –{' '}

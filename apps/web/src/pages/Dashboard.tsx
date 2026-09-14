@@ -99,7 +99,7 @@ export default function Dashboard({
                 {d.recent.map((t) => (
                   <tr key={t.id} onClick={() => onOpenTicket(t.id)}>
                     <td style={{ width: 90 }}>
-                      <b>{ticketNo(t.number)}</b>
+                      <b className="mono">{ticketNo(t.number)}</b>
                     </td>
                     <td>{t.subject}</td>
                     <td>{t.requester.fullName}</td>

@@ -96,7 +96,7 @@ export default function Procurement() {
               const types = [...new Set(r.items.map((i) => i.type))]
               return (
                 <tr key={r.id} onClick={() => setOpenId(r.id)}>
-                  <td><b>{prNo(r.number)}</b></td>
+                  <td><b className="mono">{prNo(r.number)}</b></td>
                   <td>
                     {first?.description ?? '—'}
                     {rest.length > 0 && (
@@ -116,7 +116,7 @@ export default function Procurement() {
                     {new Date(r.createdAt).toLocaleDateString()}
                   </td>
                   <td>
-                    <span className="badge warn">{STATUS_LABEL[r.statusKey]}</span>
+                    <span className={`badge status-${r.statusKey.toLowerCase()}`}>{STATUS_LABEL[r.statusKey]}</span>
                   </td>
                 </tr>
               )

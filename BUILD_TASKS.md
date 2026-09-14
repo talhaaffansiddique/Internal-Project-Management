@@ -452,5 +452,38 @@ Each step restates scope + success criteria before code is written.
   relative to each other; completing a to-do under the Foundry skin fired
   the amber sliver burst with the row highlight, confirmed via screenshot
   mid-animation. Reset company skin to Default before finishing.
+- [x] **CR-11 — Harbor Slate applied site-wide, live as the company skin**
+  CR-9/CR-10 reskinned the shell (sidebar, buttons, cards, Dashboard) but
+  the app's most visible widget — status badges/pills — never actually
+  moved: every ticket/project/training/procurement status class had its
+  own hardcoded hex colors, and several list pages (`Tickets.tsx`,
+  `Training.tsx`, `Procurement.tsx`/`ProcurementDetail.tsx`) rendered
+  every status through one generic `badge warn` class regardless of the
+  real status, so nothing there could react to a skin at all.
+  - Added a semantic badge-color token set (info/cyan/progress/review/
+    danger/done/muted, plus banner) to `:root`, dark mode, and all three
+    skins (Harbor, Foundry, Meadow — light + dark each), and pointed
+    every `.badge.status-*` rule at the matching token instead of a
+    literal hex.
+  - Fixed the list pages above to render the actual per-status class
+    (`badge status-${statusKey}`) instead of a single hardcoded `warn`,
+    and added the missing status classes for Training's and
+    Procurement's own status keys.
+  - Tokenized the two remaining hardcoded spots: the sidebar/login brand
+    mark's gradient (`--logo-grad`) and the `.banner` warning strip.
+  - Ticket/PR/task/project/meeting/training reference numbers now render
+    in the skin's monospace face (`.mono`) everywhere they're shown, not
+    just in Procurement.
+  - Small Harbor-specific polish: Kanban cards (`.kard`) get a touch more
+    corner radius and a hover lift.
+  - Set the company-wide skin to **Harbor Slate** (Administration →
+    Appearance, Super Admin only — unchanged from CR-9, still there for
+    switching later).
+  *Done:* `npm run build` clean for both apps. Verified in-browser under
+  Harbor Slate: login page, sidebar, Dashboard, Tickets list (New vs.
+  Waiting-for-User now render as genuinely different colors, confirmed
+  via computed-style check — previously both were identical `badge warn`
+  amber), Procurement list/detail stage pill, and the Projects Kanban
+  board all consistently reflect the skin.
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

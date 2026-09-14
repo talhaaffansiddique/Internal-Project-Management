@@ -135,7 +135,7 @@ export default function Tasks({
                     {items.map((t) => (
                       <tr key={t.id}>
                         <td style={{ width: 90 }}>
-                          <b>{taskNo(t.number)}</b>
+                          <b className="mono">{taskNo(t.number)}</b>
                         </td>
                         <td>{t.title}</td>
                         <td

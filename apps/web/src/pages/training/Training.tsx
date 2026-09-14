@@ -99,7 +99,7 @@ export default function Training() {
               ).length
               return (
                 <tr key={t.id} onClick={() => setOpenId(t.id)}>
-                  <td><b>{trainingNo(t.number)}</b></td>
+                  <td><b className="mono">{trainingNo(t.number)}</b></td>
                   <td>{t.topic}</td>
                   <td>{t.trainer.fullName}</td>
                   <td>
@@ -120,7 +120,7 @@ export default function Training() {
                     {new Date(t.createdAt).toLocaleDateString()}
                   </td>
                   <td>
-                    <span className="badge warn">
+                    <span className={`badge status-${t.statusKey}`}>
                       {STATUS_LABEL[t.statusKey] ?? t.statusKey}
                     </span>
                   </td>

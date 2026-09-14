@@ -114,7 +114,7 @@ export default function TicketDetail({
       <div className="page-head" style={{ marginTop: 14 }}>
         <div>
           <h1>
-            <span className="muted">{ticketNo(ticket.number)}</span> {ticket.subject}
+            <span className="muted mono">{ticketNo(ticket.number)}</span> {ticket.subject}
           </h1>
           <p className="muted small">
             {ticket.form?.label ?? ticket.type} · raised by {ticket.requester.fullName} ·{' '}

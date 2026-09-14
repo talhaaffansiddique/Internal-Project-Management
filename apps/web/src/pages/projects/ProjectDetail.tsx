@@ -136,7 +136,7 @@ export default function ProjectDetail({
       <div className="page-head" style={{ marginTop: 14 }}>
         <div>
           <h1>
-            <span className="muted">{projectNo(project.number)}</span> {project.title}
+            <span className="muted mono">{projectNo(project.number)}</span> {project.title}
           </h1>
           <p className="muted small">
             Owner {project.owner.fullName}

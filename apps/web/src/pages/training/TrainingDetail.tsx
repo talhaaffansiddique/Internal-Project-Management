@@ -149,7 +149,7 @@ export default function TrainingDetail({
       <div className="page-head" style={{ marginTop: 14 }}>
         <div>
           <h1>
-            <span className="muted">{trainingNo(t.number)}</span> {t.topic}
+            <span className="muted mono">{trainingNo(t.number)}</span> {t.topic}
           </h1>
           <p className="muted small">
             {t.type === 'GROUP' ? 'Group' : 'Individual'} · trainer {t.trainer.fullName}
