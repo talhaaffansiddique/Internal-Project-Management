@@ -28,7 +28,10 @@ export default function Login() {
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
           <ThemeSwitch />
         </div>
-        <h1>Captain Project Management</h1>
+        <div className="brand-chip login-logo-chip">
+          <img src="/captain-logo.png" alt="Captain & Company" className="login-logo" />
+        </div>
+        <h1>Project Management</h1>
         <p className="sub">Internal Company Operations Platform</p>
 
         <label>

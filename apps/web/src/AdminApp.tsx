@@ -102,7 +102,10 @@ export default function AdminApp() {
     <div className="layout">
       <aside className="sidebar">
         <div className="side-brand">
-          <span className="logo">C&amp;C</span> Captain Project Management
+          <div className="brand-chip">
+            <img src="/captain-mark.png" alt="Captain & Company" className="brand-mark" />
+          </div>
+          <span className="brand-tag">Project Management</span>
         </div>
         {groups.map((g) => (
           <div key={g}>

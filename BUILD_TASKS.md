@@ -485,5 +485,28 @@ Each step restates scope + success criteria before code is written.
   via computed-style check — previously both were identical `badge warn`
   amber), Procurement list/detail stage pill, and the Projects Kanban
   board all consistently reflect the skin.
+- [x] **CR-12 — Real Captain & Company logo**
+  Replaced the placeholder "C&C" gradient-square mark with the actual
+  company logo (supplied as `Captain-Logo-(HR).png`, 6714×3334
+  transparent PNG) everywhere it appears:
+  - `apps/web/public/` — kept the source file, plus two derived web-
+    optimized assets: `captain-logo.png` (1400px, full lockup incl.
+    "Captain & Company" line — login page) and `captain-mark.png`
+    (340px, wordmark-only crop — sidebar rail, where space is tight).
+  - Sidebar (`AdminApp.tsx`) and login page (`Login.tsx`) both wrap the
+    logo in a white "brand chip" (`.brand-chip` in `App.css`) — the
+    logo's wordmark is solid black, and both spots can be dark (the
+    sidebar rail always is; the login card is under Harbor Slate/dark
+    mode), so the chip keeps the brand's actual black+red colors intact
+    instead of the wordmark vanishing or getting color-inverted.
+  - Sidebar now reads: logo mark, then "PROJECT MANAGEMENT" as a small
+    caption (the logo itself already says "Captain"/"Captain & Company").
+    Login page follows the same pattern with the full lockup.
+  - Updated the one/two-page overview document to match (logo embedded
+    in its masthead) and republished both the artifact and the PDF sent
+    to the user.
+  *Done:* `npm run build` clean. Verified in-browser under Harbor Slate
+  dark mode: logo fully legible on both the login card and the sidebar
+  rail via the white chip.
 - [ ] **v1.5 — Management Reporting**
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)
