@@ -14,6 +14,7 @@ import { MeetingsModule } from './meetings/meetings.module.js';
 import { TrainingModule } from './training/training.module.js';
 import { ProcurementModule } from './procurement/procurement.module.js';
 import { AppearanceModule } from './appearance/appearance.module.js';
+import { ReportsModule } from './reports/reports.module.js';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AppearanceModule } from './appearance/appearance.module.js';
     TrainingModule,
     ProcurementModule,
     AppearanceModule,
+    ReportsModule,
     HealthModule,
   ],
 })

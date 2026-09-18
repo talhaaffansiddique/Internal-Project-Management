@@ -508,5 +508,33 @@ Each step restates scope + success criteria before code is written.
   *Done:* `npm run build` clean. Verified in-browser under Harbor Slate
   dark mode: logo fully legible on both the login card and the sidebar
   rail via the white chip.
-- [ ] **v1.5 — Management Reporting**
+- [x] **v1.5 — Management Reporting (brief §18)** — Super Admin only for now
+  API: new `ReportsModule` (`GET /reports/overview`, `@Roles('SUPER_ADMIN')`)
+  aggregates every bullet from brief §18 across the six existing modules —
+  no new data model needed, this is read-only aggregation of what's
+  already captured:
+  - Tickets: totals, open count, by status/type/department/team, average
+    resolution time (createdAt → closedAt, resolved tickets only).
+  - Projects: by status, delayed list (past target date and not
+    completed, or explicitly `delayed`).
+  - Tasks: by status, overdue count (past due date, not done).
+  - Meetings: RSVP breakdown, attendance rate, pending-response count.
+  - Training: by status, completion rate, participants needing follow-up
+    (`ackStatus = NEEDS_FOLLOW_UP`).
+  - Procurement: by stage, count pending approval (Submitted/Awaiting
+    Director/Awaiting Final Approval).
+  - Workload: open + overdue Activity counts per employee (top 15,
+    busiest first) — covers "employee workload and assigned activities."
+  Web: new Administration → **Reports** page (`pages/admin/Reports.tsx`),
+  gated the same way as Appearance (`superAdmin: true` in the nav config,
+  `isSuperAdmin` check on the route) — visible to nobody else for now,
+  per your instruction; which reports (if any) open up to other roles is
+  still open, to be decided later. Stat tiles + progress-bar breakdown
+  lists, reusing the app's existing `.cards`/`.stat`/`.progress-bar`
+  classes rather than a new chart component.
+  *Done:* `npm run build` clean for both apps. Verified via API: a
+  non-Super-Admin login gets 403 on `/reports/overview`; Super Admin gets
+  the full payload with real seed-data numbers. Verified in-browser:
+  Reports page renders correctly under Harbor Slate, all seven sections
+  populated.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

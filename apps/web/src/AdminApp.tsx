@@ -18,6 +18,7 @@ import Meetings from './pages/meetings/Meetings'
 import Training from './pages/training/Training'
 import Procurement from './pages/procurement/Procurement'
 import Appearance from './pages/admin/Appearance'
+import Reports from './pages/admin/Reports'
 
 type View =
   | 'dashboard'
@@ -34,6 +35,7 @@ type View =
   | 'teams'
   | 'masterdata'
   | 'appearance'
+  | 'reports'
 
 const NAV: {
   key: View
@@ -56,6 +58,7 @@ const NAV: {
   { key: 'teams', label: 'Teams', group: 'Administration', admin: true },
   { key: 'masterdata', label: 'Master Data', group: 'Administration', admin: true },
   { key: 'appearance', label: 'Appearance', group: 'Administration', admin: true, superAdmin: true },
+  { key: 'reports', label: 'Reports', group: 'Administration', admin: true, superAdmin: true },
 ]
 
 export default function AdminApp() {
@@ -184,6 +187,7 @@ export default function AdminApp() {
           {view === 'teams' && canAdmin && <Teams />}
           {view === 'masterdata' && canAdmin && <MasterData />}
           {view === 'appearance' && isSuperAdmin && <Appearance />}
+          {view === 'reports' && isSuperAdmin && <Reports />}
         </main>
       </div>
     </div>
