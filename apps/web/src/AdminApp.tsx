@@ -9,7 +9,6 @@ import Users from './pages/admin/Users'
 import Departments from './pages/admin/Departments'
 import Teams from './pages/admin/Teams'
 import MasterData from './pages/admin/MasterData'
-import MyWork from './pages/MyWork'
 import Notifications from './pages/Notifications'
 import Tickets from './pages/tickets/Tickets'
 import Projects from './pages/projects/Projects'
@@ -22,7 +21,6 @@ import Reports from './pages/admin/Reports'
 
 type View =
   | 'dashboard'
-  | 'mywork'
   | 'tickets'
   | 'projects'
   | 'tasks'
@@ -160,10 +158,7 @@ export default function AdminApp() {
         </header>
 
         <main className="page">
-          {view === 'dashboard' && (
-            <Dashboard onOpenTicket={openTicket} onOpenMyWork={() => setView('mywork')} />
-          )}
-          {view === 'mywork' && <MyWork onOpenTicket={openTicket} />}
+          {view === 'dashboard' && <Dashboard onOpenTicket={openTicket} />}
           {view === 'tickets' && (
             <Tickets
               initialTicketId={ticketToOpen}

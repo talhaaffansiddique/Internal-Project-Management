@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { useTheme } from '../theme'
+import MyWork from './MyWork'
 
 const STATUS_LABEL: Record<string, string> = {
   new: 'New',
@@ -38,12 +39,11 @@ interface DashData {
 
 export default function Dashboard({
   onOpenTicket,
-  onOpenMyWork,
 }: {
   onOpenTicket: (id: string) => void
-  onOpenMyWork: () => void
 }) {
   const [d, setD] = useState<DashData | null>(null)
+  const [showMyWork, setShowMyWork] = useState(false)
 
   useEffect(() => {
     void api<DashData>('/dashboard').then(setD)
@@ -67,12 +67,18 @@ export default function Dashboard({
             Your operations snapshot — limited to what you're authorized to see.
           </p>
         </div>
-        <button className="btn primary" onClick={onOpenMyWork}>
-          My Work
-          {c.myOpenActivities > 0 && <span className="count">{c.myOpenActivities}</span>}
+        <button className="btn primary" onClick={() => setShowMyWork((v) => !v)}>
+          {showMyWork ? '← Dashboard' : 'My Work'}
+          {!showMyWork && c.myOpenActivities > 0 && (
+            <span className="count">{c.myOpenActivities}</span>
+          )}
         </button>
       </div>
 
+      {showMyWork ? (
+        <MyWork onOpenTicket={onOpenTicket} />
+      ) : (
+        <>
       <div className="cards">
         <Stat label="Open tickets" value={c.open} max={maxVal} />
         <Stat label="In progress" value={c.in_progress} max={maxVal} />
@@ -125,6 +131,8 @@ export default function Dashboard({
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   )
 }

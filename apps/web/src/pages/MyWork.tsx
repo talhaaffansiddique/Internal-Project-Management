@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { useAuth } from '../auth'
-import type { UserLookup } from '../types'
-import { Modal, Field, ErrorText } from '../ui'
 
 const STATUS_LABEL: Record<string, string> = {
   new: 'New',
@@ -46,7 +43,6 @@ export default function MyWork({
   onOpenTicket: (id: string) => void
 }) {
   const [d, setD] = useState<MyWorkData | null>(null)
-  const [creating, setCreating] = useState(false)
 
   async function load() {
     setD(await api<MyWorkData>('/me/work'))
@@ -69,9 +65,6 @@ export default function MyWork({
           <h1>My Work</h1>
           <p className="muted">Everything assigned to or followed by you.</p>
         </div>
-        <button className="btn primary" onClick={() => setCreating(true)}>
-          + New activity
-        </button>
       </div>
 
       <div className="cards">
@@ -147,16 +140,6 @@ export default function MyWork({
         onComplete={complete}
         onOpenTicket={onOpenTicket}
       />
-
-      {creating && (
-        <ActivityModal
-          onClose={() => setCreating(false)}
-          onSaved={() => {
-            setCreating(false)
-            void load()
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -211,91 +194,5 @@ function ActivityGroup({
         </table>
       </div>
     </div>
-  )
-}
-
-function ActivityModal({
-  onClose,
-  onSaved,
-}: {
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const { user } = useAuth()
-  const [title, setTitle] = useState('')
-  const [assignedToId, setAssignedToId] = useState(user!.id)
-  const [dueAt, setDueAt] = useState('')
-  const [people, setPeople] = useState<UserLookup[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    void api<UserLookup[]>('/users/lookup').then(setPeople)
-  }, [])
-
-  async function save() {
-    setBusy(true)
-    setError(null)
-    try {
-      await api('/activities', {
-        method: 'POST',
-        body: JSON.stringify({
-          title,
-          assignedToId,
-          dueAt: new Date(dueAt).toISOString(),
-        }),
-      })
-      onSaved()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <Modal
-      title="New activity"
-      onClose={onClose}
-      footer={
-        <>
-          <button className="btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="btn primary"
-            onClick={save}
-            disabled={busy || !title.trim() || !dueAt}
-          >
-            {busy ? 'Saving…' : 'Create'}
-          </button>
-        </>
-      }
-    >
-      <Field label="What needs doing?">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} />
-      </Field>
-      <Field label="Assign to">
-        <select
-          value={assignedToId}
-          onChange={(e) => setAssignedToId(e.target.value)}
-        >
-          {people.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.fullName}
-              {p.id === user!.id ? ' (me)' : ''}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Due">
-        <input
-          type="datetime-local"
-          value={dueAt}
-          onChange={(e) => setDueAt(e.target.value)}
-        />
-      </Field>
-      <ErrorText>{error}</ErrorText>
-    </Modal>
   )
 }

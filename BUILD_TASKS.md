@@ -585,4 +585,21 @@ Each step restates scope + success criteria before code is written.
   returns newest-entry-first. Verified in-browser: sidebar has no "My
   Work" item, Dashboard shows a badged "My Work" button that navigates
   to the existing My Work page.
+- [x] **CR-14b — My Work embedded inline on the Dashboard, not a separate view**
+  Follow-up correction: the CR-14 "My Work" button navigated to My Work as
+  its own page. User wanted it inline instead — no navigation, same page.
+  - `Dashboard` no longer takes `onOpenMyWork`; it holds its own
+    `showMyWork` toggle state. The header button flips that state and
+    relabels itself ("My Work" ↔ "← Dashboard"); the activity-count badge
+    only shows while collapsed. Toggling swaps the dashboard's stat cards
+    + Recent tickets panel for `<MyWork />` in place, on the same page —
+    unchecking it restores the exact same dashboard as before.
+    Wraps the existing dashboard body in a fragment gated on `!showMyWork`.
+  - `AdminApp` dropped the `mywork` view entirely: no `MyWork` import, no
+    `'mywork'` in the `View` union, no standalone render branch. My Work
+    now only exists embedded inside `Dashboard`.
+  - Removed the "+ New activity" button and its `ActivityModal` from
+    `MyWork.tsx` per the same request — My Work is now read/complete only,
+    no standalone activity creation from that view.
+  *Done:* `npm run build` clean for apps/web (tsc + vite).
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)
