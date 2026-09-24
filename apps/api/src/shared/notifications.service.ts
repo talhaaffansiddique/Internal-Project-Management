@@ -16,7 +16,35 @@ export interface NotifyInput {
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  notify(input: NotifyInput) {
+  /**
+   * If this recipient already has an unread notification about the same
+   * record, refresh it in place (new title/body, bumped to the top)
+   * instead of stacking a duplicate — so a busy thread (e.g. a ticket
+   * getting reassigned twice) doesn't pile up multiple entries. Once a
+   * notification has been read, a new one is created as usual.
+   */
+  async notify(input: NotifyInput) {
+    if (input.entityType && input.entityId) {
+      const existing = await this.prisma.notification.findFirst({
+        where: {
+          recipientId: input.recipientId,
+          entityType: input.entityType,
+          entityId: input.entityId,
+          readAt: null,
+        },
+      });
+      if (existing) {
+        return this.prisma.notification.update({
+          where: { id: existing.id },
+          data: {
+            type: input.type,
+            title: input.title,
+            body: input.body,
+            createdAt: new Date(),
+          },
+        });
+      }
+    }
     return this.prisma.notification.create({
       data: {
         recipientId: input.recipientId,
@@ -35,16 +63,9 @@ export class NotificationsService {
   ) {
     const unique = [...new Set(recipientIds)];
     if (unique.length === 0) return;
-    await this.prisma.notification.createMany({
-      data: unique.map((recipientId) => ({
-        recipientId,
-        type: input.type,
-        title: input.title,
-        body: input.body,
-        entityType: input.entityType,
-        entityId: input.entityId,
-      })),
-    });
+    await Promise.all(
+      unique.map((recipientId) => this.notify({ ...input, recipientId })),
+    );
   }
 
   list(userId: string, unreadOnly: boolean) {

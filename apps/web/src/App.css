@@ -318,6 +318,11 @@ h1, h2, h3 { font-family: var(--font-display); }
   min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px;
   display: inline-flex; align-items: center; justify-content: center;
 }
+.btn .count {
+  background: rgba(255,255,255,.28); color: inherit; font-size: 11px;
+  min-width: 18px; height: 18px; border-radius: 9px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
 
 /* ---------- Notifications ---------- */
 .notif-list { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }

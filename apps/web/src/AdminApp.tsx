@@ -45,7 +45,6 @@ const NAV: {
   superAdmin?: boolean
 }[] = [
   { key: 'dashboard', label: 'Dashboard', group: 'Main' },
-  { key: 'mywork', label: 'My Work', group: 'Main' },
   { key: 'tickets', label: 'Tickets & Requests', group: 'Main' },
   { key: 'projects', label: 'Projects', group: 'Main' },
   { key: 'tasks', label: 'Tasks', group: 'Main' },
@@ -161,7 +160,9 @@ export default function AdminApp() {
         </header>
 
         <main className="page">
-          {view === 'dashboard' && <Dashboard onOpenTicket={openTicket} />}
+          {view === 'dashboard' && (
+            <Dashboard onOpenTicket={openTicket} onOpenMyWork={() => setView('mywork')} />
+          )}
           {view === 'mywork' && <MyWork onOpenTicket={openTicket} />}
           {view === 'tickets' && (
             <Tickets

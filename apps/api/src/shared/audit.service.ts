@@ -37,10 +37,11 @@ export class AuditService {
     });
   }
 
+  /** Newest first — this feeds the "Activity" tab, read like a log, not a conversation. */
   listForEntity(entityType: EntityType, entityId: string) {
     return this.prisma.auditLog.findMany({
       where: { entityType, entityId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       include: { actor: { select: { id: true, fullName: true } } },
     });
   }

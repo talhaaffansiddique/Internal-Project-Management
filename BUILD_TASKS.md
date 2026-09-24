@@ -555,4 +555,34 @@ Each step restates scope + success criteria before code is written.
   `@Ais`, picked "Aisha Admin" from the dropdown, posted, confirmed the
   rendered tag, then logged in as Aisha via the API and confirmed a real
   `MENTION` notification ("You were mentioned in a comment") was created.
+- [x] **CR-14 — Notification dedup, Activity newest-first, My Work moved to a Dashboard button**
+  Three fixes from user feedback (screenshots of a cluttered notification
+  bell and an Activity tab reading oldest-first):
+  - `NotificationsService.notify()` now checks for an existing *unread*
+    notification to the same recipient about the same record before
+    creating a new one — if found, it updates that row in place (new
+    title/body, `createdAt` bumped to now) instead of stacking a
+    duplicate. A busy thread (ticket reassigned twice, a procurement
+    request moving stage after stage) now shows one notification that
+    stays current, not a growing pile of near-identical entries.
+    `notifyMany` now routes through the same per-recipient logic.
+  - `AuditService.listForEntity` (the "Activity" tab) now orders
+    `createdAt: 'desc'` — newest first, read like a log. Left Discussion's
+    merged comment+event stream on its existing oldest-first order (a
+    conversation reads top-to-bottom); only the Activity/audit feed
+    changed.
+  - Removed "My Work" from the sidebar; `Dashboard` now takes an
+    `onOpenMyWork` prop and shows a **My Work** button in its header,
+    badged with `myOpenActivities` (per-user, from the same dashboard
+    payload) — so it's personal to whoever's looking, same as before,
+    just reached from the Dashboard instead of its own nav entry. The
+    `MyWork` page and route are unchanged, only how you get there.
+  *Done:* `npm run build` clean for both apps. Verified via API: forwarded
+  a fresh request to the Director then had the Director approve it —
+  both notify the requester — and confirmed exactly one unread
+  notification exists for that entity afterward (updated, not
+  duplicated). Confirmed via API that a request's audit trail now
+  returns newest-entry-first. Verified in-browser: sidebar has no "My
+  Work" item, Dashboard shows a badged "My Work" button that navigates
+  to the existing My Work page.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

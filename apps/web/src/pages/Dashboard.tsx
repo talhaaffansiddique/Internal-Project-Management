@@ -38,8 +38,10 @@ interface DashData {
 
 export default function Dashboard({
   onOpenTicket,
+  onOpenMyWork,
 }: {
   onOpenTicket: (id: string) => void
+  onOpenMyWork: () => void
 }) {
   const [d, setD] = useState<DashData | null>(null)
 
@@ -65,6 +67,10 @@ export default function Dashboard({
             Your operations snapshot — limited to what you're authorized to see.
           </p>
         </div>
+        <button className="btn primary" onClick={onOpenMyWork}>
+          My Work
+          {c.myOpenActivities > 0 && <span className="count">{c.myOpenActivities}</span>}
+        </button>
       </div>
 
       <div className="cards">
