@@ -17,11 +17,13 @@ export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * If this recipient already has an unread notification about the same
-   * record, refresh it in place (new title/body, bumped to the top)
-   * instead of stacking a duplicate — so a busy thread (e.g. a ticket
-   * getting reassigned twice) doesn't pile up multiple entries. Once a
-   * notification has been read, a new one is created as usual.
+   * A recipient only ever has one notification per record. If this
+   * recipient already has a notification about the same record — read or
+   * not — refresh it in place (new title/body, bumped to the top, marked
+   * unread again) instead of stacking a duplicate. Otherwise a busy
+   * thread (a ticket reassigned twice, a request moving stage after
+   * stage) piles up one entry per event and the user has to click
+   * through each one individually to reach the current state.
    */
   async notify(input: NotifyInput) {
     if (input.entityType && input.entityId) {
@@ -30,8 +32,8 @@ export class NotificationsService {
           recipientId: input.recipientId,
           entityType: input.entityType,
           entityId: input.entityId,
-          readAt: null,
         },
+        orderBy: { createdAt: 'desc' },
       });
       if (existing) {
         return this.prisma.notification.update({
@@ -41,6 +43,7 @@ export class NotificationsService {
             title: input.title,
             body: input.body,
             createdAt: new Date(),
+            readAt: null,
           },
         });
       }

@@ -602,4 +602,31 @@ Each step restates scope + success criteria before code is written.
     `MyWork.tsx` per the same request — My Work is now read/complete only,
     no standalone activity creation from that view.
   *Done:* `npm run build` clean for apps/web (tsc + vite).
+- [x] **CR-15 — Notification dedup now survives being read**
+  User reported the same procurement request still showing several
+  separate notifications ("Server room AC unit replacement" appearing
+  more than once, requiring click-through one by one). Root cause: the
+  CR-14 dedup only merged into an *unread* notification — once the user
+  read one, the next event for that same record created a brand-new row,
+  so a request that moved through several stages after being checked at
+  least once still piled up entries over time.
+  - `NotificationsService.notify()` now looks up the most recent
+    notification for that recipient+record regardless of read state and
+    updates it in place (new type/title/body, `createdAt` bumped to now,
+    `readAt` reset to `null` so the new event is surfaced as unread
+    again). A recipient now only ever has one notification row per
+    record, full stop.
+  - One-time cleanup: removed 29 pre-existing duplicate notification rows
+    left over from before this fix, and deleted 9 leftover test
+    procurement requests (PR-0032–PR-0040, created during earlier
+    screenshot-testing sessions) that duplicated titles already in the
+    seeded demo data (PR-0027–PR-0031) — these were the second, unrelated
+    source of the "same title twice" symptom the user saw, since each was
+    a distinct real record correctly getting its own single notification.
+  *Done:* `npm run build` clean for apps/api. Verified via API: changed
+  the same ticket's status twice with a `markRead` in between — the
+  notification row's id stayed identical across both events and flipped
+  back to unread on the second change, instead of a second row appearing.
+  Verified in-browser as the affected user: Notifications page shows
+  exactly one entry per record.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)
