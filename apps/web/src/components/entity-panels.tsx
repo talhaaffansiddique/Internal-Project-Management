@@ -1,4 +1,13 @@
-import { useEffect, useRef, useState, type DragEvent, type MouseEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../ui'
@@ -20,6 +29,27 @@ interface ChatterItem {
   summary?: string
 }
 
+/** Renders comment text with any "@Full Name" that matches a real user bolded. */
+function MentionText({ text, people }: { text: string; people: UserLookup[] }) {
+  if (!text || people.length === 0) return <>{text}</>
+  const names = [...new Set(people.map((p) => p.fullName))].sort((a, b) => b.length - a.length)
+  if (names.length === 0) return <>{text}</>
+  const pattern = new RegExp(`@(${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
+  const parts: ReactNode[] = []
+  let last = 0
+  let m: RegExpExecArray | null
+  let i = 0
+  while ((m = pattern.exec(text))) {
+    if (m.index > last) parts.push(text.slice(last, m.index))
+    parts.push(
+      <span key={i++} className="mention-tag">@{m[1]}</span>,
+    )
+    last = m.index + m[0].length
+  }
+  parts.push(text.slice(last))
+  return <>{parts}</>
+}
+
 export function Chatter({
   entityType,
   entityId,
@@ -31,6 +61,12 @@ export function Chatter({
   const [loading, setLoading] = useState(true)
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
+  const [people, setPeople] = useState<UserLookup[]>([])
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const [mentionStart, setMentionStart] = useState(0)
+  const [mentioned, setMentioned] = useState<Record<string, string>>({})
+  const [activeIdx, setActiveIdx] = useState(0)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   async function load() {
     setItems(await api<ChatterItem[]>(`/${entityType}/${entityId}/chatter`))
@@ -40,16 +76,82 @@ export function Chatter({
     void load().finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityId])
+  useEffect(() => {
+    void api<UserLookup[]>('/users/lookup').then(setPeople)
+  }, [])
+
+  const matches =
+    mentionQuery === null
+      ? []
+      : people
+          .filter((p) => p.fullName.toLowerCase().includes(mentionQuery.toLowerCase()))
+          .slice(0, 6)
+
+  function onChangeBody(e: ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value
+    setBody(val)
+    const caret = e.target.selectionStart
+    const upToCaret = val.slice(0, caret)
+    const at = upToCaret.lastIndexOf('@')
+    if (at === -1 || /\s/.test(upToCaret.slice(at + 1))) {
+      setMentionQuery(null)
+      return
+    }
+    // Don't reopen if "@" is glued to a preceding word character (e.g. an email).
+    if (at > 0 && /\S/.test(upToCaret[at - 1]) && upToCaret[at - 1] !== '\n') {
+      setMentionQuery(null)
+      return
+    }
+    setMentionStart(at)
+    setMentionQuery(upToCaret.slice(at + 1))
+    setActiveIdx(0)
+  }
+
+  function selectMention(person: UserLookup) {
+    const before = body.slice(0, mentionStart)
+    const caret = textareaRef.current?.selectionStart ?? body.length
+    const after = body.slice(caret)
+    const inserted = `@${person.fullName} `
+    const next = before + inserted + after
+    setBody(next)
+    setMentioned((m) => ({ ...m, [person.id]: person.fullName }))
+    setMentionQuery(null)
+    requestAnimationFrame(() => {
+      const pos = before.length + inserted.length
+      textareaRef.current?.focus()
+      textareaRef.current?.setSelectionRange(pos, pos)
+    })
+  }
+
+  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (mentionQuery === null || matches.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIdx((i) => (i + 1) % matches.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIdx((i) => (i - 1 + matches.length) % matches.length)
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      selectMention(matches[activeIdx])
+    } else if (e.key === 'Escape') {
+      setMentionQuery(null)
+    }
+  }
 
   async function post() {
     if (!body.trim()) return
     setBusy(true)
     try {
+      const mentions = Object.entries(mentioned)
+        .filter(([, name]) => body.includes(`@${name}`))
+        .map(([id]) => id)
       await api(`/${entityType}/${entityId}/comments`, {
         method: 'POST',
-        body: JSON.stringify({ body }),
+        body: JSON.stringify({ body, mentions }),
       })
       setBody('')
+      setMentioned({})
       await load()
     } finally {
       setBusy(false)
@@ -58,13 +160,35 @@ export function Chatter({
 
   return (
     <div>
-      <div className="compose">
+      <div className="compose" style={{ position: 'relative' }}>
         <textarea
-          placeholder="Write a comment…"
+          ref={textareaRef}
+          placeholder="Write a comment… (type @ to mention someone)"
           rows={2}
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={onChangeBody}
+          onKeyDown={onKeyDown}
+          onBlur={() => setTimeout(() => setMentionQuery(null), 120)}
         />
+        {mentionQuery !== null && matches.length > 0 && (
+          <ul className="mention-popup">
+            {matches.map((p, i) => (
+              <li
+                key={p.id}
+                className={i === activeIdx ? 'active' : ''}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  selectMention(p)
+                }}
+              >
+                <span className="avatar" style={{ width: 22, height: 22, fontSize: 10 }}>
+                  {p.fullName.split(' ').map((s) => s[0]).slice(0, 2).join('')}
+                </span>
+                <span>{p.fullName}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         <button
           className="btn primary"
           onClick={post}
@@ -88,7 +212,9 @@ export function Chatter({
                     {new Date(it.at).toLocaleString()}
                     {it.editedAt ? ' · edited' : ''}
                   </div>
-                  <div className="feed-body">{it.body}</div>
+                  <div className="feed-body">
+                    <MentionText text={it.body ?? ''} people={people} />
+                  </div>
                 </>
               ) : (
                 <div className="feed-event">

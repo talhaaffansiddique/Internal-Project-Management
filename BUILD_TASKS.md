@@ -537,4 +537,22 @@ Each step restates scope + success criteria before code is written.
   the full payload with real seed-data numbers. Verified in-browser:
   Reports page renders correctly under Harbor Slate, all seven sections
   populated.
+- [x] **CR-13 — Live @mention autocomplete in Discussion**
+  The `mentions` array on `POST .../comments` already existed
+  server-side (notifies + follows), but nothing in the UI ever populated
+  it — typing "@name" in a comment was just plain text with no
+  autocomplete and no notification. Fixed in `Chatter`
+  (`components/entity-panels.tsx`):
+  - Typing `@` opens a live filtered dropdown of real users (reuses
+    `/users/lookup`), with mouse and keyboard (↑/↓/Enter/Tab/Esc) selection.
+  - Selecting inserts `@Full Name` as text and tracks that user's id;
+    on Post, only names still present in the final text are sent as
+    `mentions`, so deleting a mention un-mentions them.
+  - Posted comments highlight any `@Full Name` matching a real user as a
+    styled tag (`.mention-tag`), independent of whether it was inserted
+    via the picker or typed by hand.
+  *Done:* `npm run build` clean. Verified end-to-end in-browser: typed
+  `@Ais`, picked "Aisha Admin" from the dropdown, posted, confirmed the
+  rendered tag, then logged in as Aisha via the API and confirmed a real
+  `MENTION` notification ("You were mentioned in a comment") was created.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

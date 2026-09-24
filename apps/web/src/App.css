@@ -714,6 +714,22 @@ table.grid tbody tr:hover { background: var(--surface-2); }
 .compose { display: flex; gap: 8px; margin-bottom: 14px; }
 .compose textarea { flex: 1; border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; resize: vertical; background: var(--surface); color: var(--text); }
 
+.mention-popup {
+  position: absolute; top: 100%; left: 0; margin-top: 4px; z-index: 20;
+  list-style: none; padding: 4px; min-width: 200px; max-width: 280px;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px;
+  box-shadow: var(--shadow-md);
+}
+.mention-popup li {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;
+  font-size: 13px; cursor: pointer;
+}
+.mention-popup li:hover, .mention-popup li.active { background: var(--primary-soft); }
+.mention-tag {
+  color: var(--primary-strong); background: var(--primary-soft);
+  border-radius: 4px; padding: 0 3px; font-weight: 600;
+}
+
 .feed { list-style: none; padding: 0; margin: 0; }
 .feed-item { padding: 9px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
 .feed-item:last-child { border-bottom: none; }
