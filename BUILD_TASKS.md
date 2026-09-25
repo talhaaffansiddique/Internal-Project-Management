@@ -701,4 +701,52 @@ Each step restates scope + success criteria before code is written.
   updating live); set a WhatsApp number for a user from the Users admin
   page and confirmed it round-trips through `PATCH /users/:id` and shows
   in the list.
+- [x] **CR-18 — Dev server reachable on the local network**
+  Vite's dev server defaulted to binding `localhost` only, so no other
+  device on the LAN could reach it even though the API (Node's default
+  `listen(port)`, no host given) already listened on all interfaces.
+  Added `host: true` to `apps/web/vite.config.ts`. Existing Windows
+  Firewall "Node.js JavaScript Runtime" allow rules already covered all
+  profiles/any address, so no firewall change was needed.
+  *Done:* confirmed both `http://<LAN-IP>:5180` (web) and
+  `http://<LAN-IP>:4000/api/v1/health` (api) respond from the host
+  machine's own LAN IP after restarting `npm run dev`.
+- [x] **CR-19 — Responsive layout for mobile & tablet**
+  The app shell was desktop-only: a fixed 220px sidebar + content grid
+  with no breakpoint that actually worked (an existing `max-width:720px`
+  rule tried to reflow the sidebar into a horizontal wrap, but each
+  `.side-item` forced its own `width:100%`, so it never actually
+  reflowed — sidebar and content overlapped/overran the viewport on any
+  phone-width screen).
+  - Sidebar is now an off-canvas drawer under 880px: fixed position,
+    slides in via `transform: translateX()`, dimmed scrim behind it,
+    closes on scrim tap, on the × button, or automatically after picking
+    a nav item (`AdminApp.tsx` now holds `sidebarOpen` state). A
+    hamburger button appears in the topbar only below that breakpoint
+    (hidden entirely on desktop, no layout change there).
+  - Topbar hides the non-essential bits at narrow widths (`.phase` tag,
+    the user's name/role text) so avatar + bell + theme switch + log out
+    always fit without wrapping or overflowing.
+  - Tables (`table.grid`) scroll horizontally within themselves below
+    620px instead of blowing out the page width — pure CSS
+    (`display:block; overflow-x:auto`), no JSX changes needed across the
+    many pages that render one.
+  - Stat card grids drop to 2 columns, modal scrim padding shrinks, role
+    checkbox grid and ticket `.kv` key/value grid go single-column, all
+    under the same breakpoints.
+  - **Found and fixed in passing**: `.field input { width:100% }` was
+    unscoped enough to also stretch `<input type="checkbox">` elements
+    nested inside a `.field` (the Roles checklist in the Users edit
+    modal, wrapped in a `.field` for its label) — pushed each role's
+    checkbox and label ~130px apart instead of adjacent. Excluded
+    checkbox/radio inputs from that rule. Pre-existing bug, not
+    introduced by this pass, just newly visible once mobile testing
+    actually looked closely at that modal.
+  *Done:* `npm run build` clean. Verified in-browser at 375×812
+  (mobile) and 768×1024 (tablet): drawer opens/closes correctly and
+  auto-closes on navigation, Dashboard/Tickets/ticket-detail/Users
+  (list + edit modal)/Projects Kanban board all render without
+  horizontal overflow or misalignment, desktop view (checked at full
+  width) is pixel-identical to before — the drawer CSS and hamburger
+  button don't activate above 880px.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

@@ -65,6 +65,7 @@ export default function AdminApp() {
   const [unread, setUnread] = useState(0)
   const [ticketToOpen, setTicketToOpen] = useState<string | null>(null)
   const [projectToOpen, setProjectToOpen] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const refreshUnread = useCallback(() => {
     api<{ count: number }>('/notifications/unread-count')
@@ -87,10 +88,12 @@ export default function AdminApp() {
   function openTicket(id: string) {
     setTicketToOpen(id)
     setView('tickets')
+    setSidebarOpen(false)
   }
   function openProject(id: string) {
     setProjectToOpen(id)
     setView('projects')
+    setSidebarOpen(false)
   }
 
   const canAdmin = !!user?.roles.some(
@@ -107,12 +110,23 @@ export default function AdminApp() {
 
   return (
     <div className="layout">
-      <aside className="sidebar">
+      <div
+        className={`sidebar-scrim ${sidebarOpen ? 'open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="side-brand">
           <div className="brand-chip">
             <img src="/captain-mark.png" alt="Captain & Company" className="brand-mark" />
           </div>
           <span className="brand-tag">Project Management</span>
+          <button
+            className="sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close menu"
+          >
+            ×
+          </button>
         </div>
         {groups.map((g) => (
           <div key={g}>
@@ -124,7 +138,10 @@ export default function AdminApp() {
                   key={n.key}
                   className={`side-item ${view === n.key ? 'active' : ''}`}
                   disabled={locked}
-                  onClick={() => setView(n.key)}
+                  onClick={() => {
+                    setView(n.key)
+                    setSidebarOpen(false)
+                  }}
                   title={locked ? (n.superAdmin ? 'Requires Super Admin role' : 'Requires Admin role') : undefined}
                 >
                   {n.label}
@@ -141,6 +158,13 @@ export default function AdminApp() {
 
       <div className="content">
         <header className="topbar">
+          <button
+            className="menu-btn"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
           <div className="phase">{APP_PHASE}</div>
           <div className="who">
             <ThemeSwitch />
@@ -151,7 +175,7 @@ export default function AdminApp() {
               onSeeAll={() => setView('notifications')}
             />
             <span className="avatar">{initials}</span>
-            <div>
+            <div className="who-text">
               <b>{user!.fullName}</b>
               <div className="muted small">
                 {user!.roleNames.join(', ')} ·{' '}
