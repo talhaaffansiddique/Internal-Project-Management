@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { useAuth, type CurrentUser } from '../auth'
+import { subscribeNotificationsChanged } from '../notificationsStream'
 
 interface Notification {
   id: string
@@ -23,22 +24,25 @@ export default function Notifications({
   const [rows, setRows] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
-  async function load() {
-    setLoading(true)
+  // `silent` skips the loading flag so a live push-driven refresh doesn't
+  // flash "Loading…" over the list that's already on screen.
+  async function load(silent = false) {
+    if (!silent) setLoading(true)
     try {
       setRows(await api<Notification[]>('/notifications'))
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
   useEffect(() => {
     void load()
+    return subscribeNotificationsChanged(() => void load(true))
   }, [])
 
   async function activate(n: Notification) {
     if (!n.readAt) {
       await api(`/notifications/${n.id}/read`, { method: 'POST' })
-      void load()
+      void load(true)
       onChanged?.()
     }
     if (n.entityType === 'TICKET' && n.entityId) {
@@ -48,7 +52,7 @@ export default function Notifications({
 
   async function markAll() {
     await api('/notifications/read-all', { method: 'POST' })
-    void load()
+    void load(true)
     onChanged?.()
   }
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
+import { subscribeNotificationsChanged } from '../notificationsStream'
 
 interface Notif {
   id: string
@@ -29,7 +30,10 @@ export function NotificationBell({
 
   useEffect(() => {
     if (!open) return
-    void api<Notif[]>('/notifications').then((r) => setRows(r.slice(0, 8)))
+    const load = () =>
+      void api<Notif[]>('/notifications').then((r) => setRows(r.slice(0, 8)))
+    load()
+    return subscribeNotificationsChanged(load)
   }, [open])
 
   useEffect(() => {

@@ -109,6 +109,7 @@ export default function Users() {
               <th>Email</th>
               <th>Department</th>
               <th>Roles</th>
+              <th>WhatsApp</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -119,6 +120,15 @@ export default function Users() {
                 <td>{u.email}</td>
                 <td>{u.primaryDepartment?.name ?? '—'}</td>
                 <td>{u.roles.map((r) => r.name).join(', ') || '—'}</td>
+                <td>
+                  {u.phoneNumber ? (
+                    <span className={`muted small ${u.whatsappOptIn ? '' : 'bad'}`}>
+                      {u.phoneNumber} {u.whatsappOptIn ? '' : '(opted out)'}
+                    </span>
+                  ) : (
+                    <span className="muted small">—</span>
+                  )}
+                </td>
                 <td><StatusBadge status={u.status} /></td>
               </tr>
             ))}
@@ -157,6 +167,8 @@ function UserModal({
   const [designationId, setDesignationId] = useState(value?.designation?.id ?? '')
   const [supervisorId, setSupervisorId] = useState(value?.supervisor?.id ?? '')
   const [status, setStatus] = useState<UserStatus>(value?.status ?? 'INVITED')
+  const [phoneNumber, setPhoneNumber] = useState(value?.phoneNumber ?? '')
+  const [whatsappOptIn, setWhatsappOptIn] = useState(value?.whatsappOptIn ?? false)
   const [roleKeys, setRoleKeys] = useState<string[]>(
     value?.roles.map((r) => r.key) ?? ['EMPLOYEE'],
   )
@@ -199,6 +211,8 @@ function UserModal({
             primaryDepartmentId: departmentId || undefined,
             designationId: designationId || undefined,
             supervisorId: supervisorId || undefined,
+            phoneNumber: phoneNumber.trim() || null,
+            whatsappOptIn,
           }),
         })
         if (status !== value.status) {
@@ -295,6 +309,28 @@ function UserModal({
             <option value="INVITED">Invited</option>
             <option value="DISABLED">Disabled</option>
           </select>
+        </Field>
+      )}
+
+      {!isNew && (
+        <Field
+          label="WhatsApp number"
+          hint="International format, e.g. +923001234567. Used for WhatsApp alerts on tickets, procurement, and mentions."
+        >
+          <input
+            type="tel"
+            placeholder="+923001234567"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+          />
+          <label className="checkbox" style={{ marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={whatsappOptIn}
+              onChange={(e) => setWhatsappOptIn(e.target.checked)}
+            />
+            Send WhatsApp alerts to this user
+          </label>
         </Field>
       )}
 

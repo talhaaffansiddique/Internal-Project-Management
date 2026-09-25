@@ -666,4 +666,39 @@ Each step restates scope + success criteria before code is written.
   `GET /auth/me` round-tripped the saved values; changed a ticket she's
   the requester on and confirmed the API log shows
   `[WhatsApp mock] would send to +923001234567: TKT-0269 is now "in_progress"`.
+- [x] **CR-17 — Live notifications (SSE) + admin-managed WhatsApp numbers**
+  Two follow-ups from testing CR-16 against real Meta credentials.
+  - **Live push, no polling delay.** `GET /notifications/stream` (SSE,
+    per the spec's original suggestion) pushes a bare "changed" signal to
+    a user's open tabs whenever their notifications change (new/updated
+    notification, mark-read, mark-all-read). `NotificationsService` keeps
+    an in-memory `Map<userId, Set<Response>>` of open connections
+    (single-instance only — fine at this scale, would need a pub/sub
+    layer behind a load balancer). Frontend: `notificationsStream.ts` is
+    one shared `EventSource` for the whole app; `AdminApp` (sidebar +
+    bell badge), `NotificationBell` (dropdown list while open), and the
+    `Notifications` page all subscribe. The badge/list update instantly
+    with no reload and no "Loading…" flash — `Notifications.tsx`'s
+    `load()` takes a `silent` flag so a push-driven refetch doesn't touch
+    the loading state. A 120s poll stays as a safety net in case the
+    stream connection ever silently drops.
+  - **Admin-managed phone numbers.** Self-service (CR-16) is still there,
+    but an admin can now set/see any employee's WhatsApp number and
+    opt-in directly from **Users** — new "WhatsApp" column in the list,
+    and a phone number + opt-in field in the edit modal, same
+    `PATCH /users/:id` your other edits already use
+    (`UpdateUserDto.phoneNumber` / `.whatsappOptIn`, validated to E.164).
+  - **Root-caused why no WhatsApp message arrived in testing**: Meta
+    rejected it with `131030: Recipient phone number not in allowed
+    list`. On the test/sandbox number, every recipient must be added and
+    OTP-verified in Meta's console separately from opting in inside our
+    app — a one-time step per test number, documented for the user, not
+    a bug in our code.
+  *Done:* `npm run build` clean for both apps. Verified end-to-end in
+  browser: confirmed the SSE connection opens and receives a real
+  `changed` event the instant a ticket status changes (via a raw
+  `EventSource` in the browser console, and via the actual UI badge/list
+  updating live); set a WhatsApp number for a user from the Users admin
+  page and confirmed it round-trips through `PATCH /users/:id` and shows
+  in the list.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

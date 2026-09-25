@@ -83,6 +83,8 @@ export interface AdminUser {
   supervisor: { id: string; fullName: string } | null
   roles: { key: string; name: string }[]
   lastLoginAt: string | null
+  phoneNumber: string | null
+  whatsappOptIn: boolean
 }
 
 export interface UserLookup {

@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import type { Response } from 'express';
 import { EntityType, NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { WhatsAppService } from './whatsapp.service.js';
@@ -28,10 +29,31 @@ function isWhatsAppEligible(type: NotificationType, entityType?: EntityType) {
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
+  /** Open SSE connections per recipient — in-memory, single-instance only. */
+  private readonly streams = new Map<string, Set<Response>>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly whatsapp: WhatsAppService,
   ) {}
+
+  registerStream(userId: string, res: Response) {
+    if (!this.streams.has(userId)) this.streams.set(userId, new Set());
+    this.streams.get(userId)!.add(res);
+  }
+
+  unregisterStream(userId: string, res: Response) {
+    const set = this.streams.get(userId);
+    set?.delete(res);
+    if (set && set.size === 0) this.streams.delete(userId);
+  }
+
+  /** Tells that recipient's open tabs "something changed, go refetch" — no payload, keeps this dumb and hard to get out of sync with the REST shape. */
+  private pushChanged(userId: string) {
+    const set = this.streams.get(userId);
+    if (!set || set.size === 0) return;
+    for (const res of set) res.write('event: changed\ndata: {}\n\n');
+  }
 
   /**
    * A recipient only ever has one notification per record. If this
@@ -64,6 +86,7 @@ export class NotificationsService {
           },
         });
         void this.relayToWhatsApp(input);
+        this.pushChanged(input.recipientId);
         return updated;
       }
     }
@@ -78,6 +101,7 @@ export class NotificationsService {
       },
     });
     void this.relayToWhatsApp(input);
+    this.pushChanged(input.recipientId);
     return created;
   }
 
@@ -133,10 +157,12 @@ export class NotificationsService {
       where: { id, recipientId: userId },
     });
     if (!n) throw new NotFoundException('Notification not found');
-    return this.prisma.notification.update({
+    const updated = await this.prisma.notification.update({
       where: { id },
       data: { readAt: new Date() },
     });
+    this.pushChanged(userId);
+    return updated;
   }
 
   async markAllRead(userId: string) {
@@ -144,6 +170,7 @@ export class NotificationsService {
       where: { recipientId: userId, readAt: null },
       data: { readAt: new Date() },
     });
+    this.pushChanged(userId);
     return { ok: true };
   }
 }

@@ -171,6 +171,29 @@ export class NotificationsController {
     return { count: await this.notifications.unreadCount(userId) };
   }
 
+  /**
+   * Server-Sent Events — pushes a bare "changed" signal whenever this
+   * user's notifications change, so the client can silently refetch
+   * instead of polling. No payload on the wire; keeps this endpoint
+   * trivially impossible to get out of sync with the REST shape above.
+   */
+  @Get('stream')
+  stream(@CurrentUser('id') userId: string, @Res() res: Response) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+    res.write(': connected\n\n');
+
+    this.notifications.registerStream(userId, res);
+    const heartbeat = setInterval(() => res.write(': ping\n\n'), 25000);
+
+    res.on('close', () => {
+      clearInterval(heartbeat);
+      this.notifications.unregisterStream(userId, res);
+    });
+  }
+
   @Post('read-all')
   readAll(@CurrentUser('id') userId: string) {
     return this.notifications.markAllRead(userId);

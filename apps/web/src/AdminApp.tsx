@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './auth'
 import { api } from './api'
+import { subscribeNotificationsChanged } from './notificationsStream'
 import { NotificationBell } from './components/NotificationBell'
 import { ThemeSwitch } from './theme'
 import { APP_VERSION, APP_PHASE } from './version'
@@ -73,8 +74,14 @@ export default function AdminApp() {
 
   useEffect(() => {
     refreshUnread()
-    const t = setInterval(refreshUnread, 30000)
-    return () => clearInterval(t)
+    // Live push via SSE for instant updates, plus a slow poll as a safety
+    // net in case the stream connection ever silently drops.
+    const unsubscribe = subscribeNotificationsChanged(refreshUnread)
+    const t = setInterval(refreshUnread, 120000)
+    return () => {
+      unsubscribe()
+      clearInterval(t)
+    }
   }, [refreshUnread])
 
   function openTicket(id: string) {

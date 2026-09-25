@@ -166,6 +166,8 @@ export class UsersService {
         primaryDepartmentId: dto.primaryDepartmentId,
         designationId: dto.designationId,
         supervisorId: dto.supervisorId,
+        phoneNumber: dto.phoneNumber,
+        whatsappOptIn: dto.whatsappOptIn,
       },
       include: USER_INCLUDE,
     });
