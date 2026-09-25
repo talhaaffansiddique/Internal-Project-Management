@@ -20,12 +20,25 @@ function ymd(d: Date) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-export default function Meetings() {
-  const [openId, setOpenId] = useState<string | null>(null)
+export default function Meetings({
+  initialMeetingId,
+  onConsumed,
+}: {
+  initialMeetingId?: string | null
+  onConsumed?: () => void
+} = {}) {
+  const [openId, setOpenId] = useState<string | null>(initialMeetingId ?? null)
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()))
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+
+  useEffect(() => {
+    if (!initialMeetingId) return
+    setOpenId(initialMeetingId)
+    onConsumed?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialMeetingId])
 
   const range = useMemo(() => {
     const from = new Date(cursor.getFullYear(), cursor.getMonth(), 1)

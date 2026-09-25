@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { api } from '../api'
 import { subscribeNotificationsChanged } from '../notificationsStream'
 
@@ -17,11 +17,13 @@ export function NotificationBell({
   count,
   onRefresh,
   onOpenTicket,
+  onOpenMeeting,
   onSeeAll,
 }: {
   count: number
   onRefresh: () => void
   onOpenTicket: (id: string) => void
+  onOpenMeeting?: (id: string) => void
   onSeeAll: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -53,6 +55,10 @@ export function NotificationBell({
     }
     if (n.entityType === 'TICKET' && n.entityId) {
       onOpenTicket(n.entityId)
+      setOpen(false)
+    }
+    if (n.entityType === 'MEETING' && n.entityId) {
+      onOpenMeeting?.(n.entityId)
       setOpen(false)
     }
   }
@@ -92,17 +98,23 @@ export function NotificationBell({
             </p>
           ) : (
             rows.map((n) => (
-              <button
+              <div
                 key={n.id}
                 className={`bell-item ${n.readAt ? '' : 'unread'}`}
+                role="button"
+                tabIndex={0}
                 onClick={() => activate(n)}
+                onKeyDown={(e) => e.key === 'Enter' && activate(n)}
               >
                 <b>{n.title}</b>
                 {n.body && <div className="muted small">{n.body}</div>}
+                {n.type === 'MEETING_INVITATION' && n.entityType === 'MEETING' && n.entityId && (
+                  <BellRsvpButtons meetingId={n.entityId} onDone={onRefresh} />
+                )}
                 <div className="muted small">
                   {new Date(n.createdAt).toLocaleString()}
                 </div>
-              </button>
+              </div>
             ))
           )}
           <button
@@ -116,6 +128,51 @@ export function NotificationBell({
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+function BellRsvpButtons({
+  meetingId,
+  onDone,
+}: {
+  meetingId: string
+  onDone: () => void
+}) {
+  const [responded, setResponded] = useState<'ACCEPTED' | 'TENTATIVE' | 'DECLINED' | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function respond(e: ReactMouseEvent, response: 'ACCEPTED' | 'TENTATIVE' | 'DECLINED') {
+    e.stopPropagation()
+    setBusy(true)
+    try {
+      await api(`/meetings/${meetingId}/rsvp`, {
+        method: 'POST',
+        body: JSON.stringify({ response }),
+      })
+      setResponded(response)
+      onDone()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (responded) {
+    const label = { ACCEPTED: 'Accepted', TENTATIVE: 'Marked as maybe', DECLINED: 'Declined' }[responded]
+    return <div className="muted small">You responded: {label}</div>
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 5, margin: '4px 0' }}>
+      <button className="btn tiny primary" disabled={busy} onClick={(e) => respond(e, 'ACCEPTED')}>
+        Accept
+      </button>
+      <button className="btn tiny" disabled={busy} onClick={(e) => respond(e, 'TENTATIVE')}>
+        Maybe
+      </button>
+      <button className="btn tiny" disabled={busy} onClick={(e) => respond(e, 'DECLINED')}>
+        Decline
+      </button>
     </div>
   )
 }

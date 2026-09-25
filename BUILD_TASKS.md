@@ -749,4 +749,32 @@ Each step restates scope + success criteria before code is written.
   horizontal overflow or misalignment, desktop view (checked at full
   width) is pixel-identical to before — the drawer CSS and hamburger
   button don't activate above 880px.
+- [x] **CR-20 — Meeting RSVP directly from notifications**
+  Meeting-invitation notifications were plain text with no way to
+  respond except navigating to the meeting first.
+  - Both the bell dropdown (`NotificationBell.tsx`) and the full
+    Notifications page now show inline **Accept / Maybe / Decline**
+    buttons on any `MEETING_INVITATION` notification, calling the
+    existing `POST /meetings/:id/rsvp` directly (no backend changes
+    needed — the notification's `entityId` already is the meeting id).
+    Buttons `stopPropagation()` so clicking them doesn't also trigger
+    the row's navigation; after responding they're replaced with "You
+    responded: Accepted/Marked as maybe/Declined".
+  - Clicking the notification body itself (not the buttons) now
+    navigates straight to that meeting's detail page — extended the
+    existing ticket-only `clickable`/navigation pattern to
+    `entityType === 'MEETING'`. Wired a new `meetingToOpen` /
+    `openMeeting()` pair through `AdminApp.tsx`, matching how
+    `ticketToOpen`/`openTicket` already worked; `Meetings.tsx` gained
+    `initialMeetingId`/`onConsumed` props to accept the deep link.
+  - `NotificationBell`'s row had to change from a `<button>` to a
+    `<div role="button">` — a `<button>` can't contain nested `<button>`
+    children (the RSVP buttons), which is invalid HTML.
+  *Done:* `npm run build` clean. Verified end-to-end: created a real
+  meeting invite via the API, confirmed Accept/Maybe/Decline render in
+  both the bell and the full page, clicked Accept in the bell dropdown
+  and saw it swap to "You responded: Accepted", then clicked the
+  notification body and landed on the correct meeting detail page
+  showing "Your response: Accepted" — confirming the RSVP from the
+  notification actually persisted.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

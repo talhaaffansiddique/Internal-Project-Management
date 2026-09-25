@@ -65,6 +65,7 @@ export default function AdminApp() {
   const [unread, setUnread] = useState(0)
   const [ticketToOpen, setTicketToOpen] = useState<string | null>(null)
   const [projectToOpen, setProjectToOpen] = useState<string | null>(null)
+  const [meetingToOpen, setMeetingToOpen] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const refreshUnread = useCallback(() => {
@@ -93,6 +94,11 @@ export default function AdminApp() {
   function openProject(id: string) {
     setProjectToOpen(id)
     setView('projects')
+    setSidebarOpen(false)
+  }
+  function openMeeting(id: string) {
+    setMeetingToOpen(id)
+    setView('meetings')
     setSidebarOpen(false)
   }
 
@@ -172,6 +178,7 @@ export default function AdminApp() {
               count={unread}
               onRefresh={refreshUnread}
               onOpenTicket={openTicket}
+              onOpenMeeting={openMeeting}
               onSeeAll={() => setView('notifications')}
             />
             <span className="avatar">{initials}</span>
@@ -203,11 +210,20 @@ export default function AdminApp() {
             />
           )}
           {view === 'tasks' && <Tasks onOpenProject={openProject} />}
-          {view === 'meetings' && <Meetings />}
+          {view === 'meetings' && (
+            <Meetings
+              initialMeetingId={meetingToOpen}
+              onConsumed={() => setMeetingToOpen(null)}
+            />
+          )}
           {view === 'training' && <Training />}
           {view === 'procurement' && <Procurement />}
           {view === 'notifications' && (
-            <Notifications onChanged={refreshUnread} onOpenTicket={openTicket} />
+            <Notifications
+              onChanged={refreshUnread}
+              onOpenTicket={openTicket}
+              onOpenMeeting={openMeeting}
+            />
           )}
           {view === 'users' && canAdmin && <Users />}
           {view === 'departments' && canAdmin && <Departments />}

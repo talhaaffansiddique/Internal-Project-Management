@@ -17,9 +17,11 @@ interface Notification {
 export default function Notifications({
   onChanged,
   onOpenTicket,
+  onOpenMeeting,
 }: {
   onChanged?: () => void
   onOpenTicket?: (id: string) => void
+  onOpenMeeting?: (id: string) => void
 }) {
   const [rows, setRows] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,6 +50,9 @@ export default function Notifications({
     if (n.entityType === 'TICKET' && n.entityId) {
       onOpenTicket?.(n.entityId)
     }
+    if (n.entityType === 'MEETING' && n.entityId) {
+      onOpenMeeting?.(n.entityId)
+    }
   }
 
   async function markAll() {
@@ -58,7 +63,9 @@ export default function Notifications({
 
   const unread = rows.filter((r) => !r.readAt).length
   const clickable = (n: Notification) =>
-    n.entityType === 'TICKET' && !!n.entityId
+    (n.entityType === 'TICKET' || n.entityType === 'MEETING') && !!n.entityId
+  const isMeetingInvite = (n: Notification) =>
+    n.type === 'MEETING_INVITATION' && n.entityType === 'MEETING' && !!n.entityId
 
   return (
     <div>
@@ -94,8 +101,13 @@ export default function Notifications({
               <div className="notif-main">
                 <b>{n.title}</b>
                 {n.body && <div className="muted small">{n.body}</div>}
+                {isMeetingInvite(n) && (
+                  <RsvpButtons meetingId={n.entityId!} />
+                )}
                 {clickable(n) && (
-                  <div className="muted small">Open ticket →</div>
+                  <div className="muted small">
+                    {n.entityType === 'TICKET' ? 'Open ticket →' : 'Open meeting →'}
+                  </div>
                 )}
               </div>
               <span className="muted small">
@@ -105,6 +117,46 @@ export default function Notifications({
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function RsvpButtons({ meetingId }: { meetingId: string }) {
+  const [responded, setResponded] = useState<'ACCEPTED' | 'TENTATIVE' | 'DECLINED' | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function respond(response: 'ACCEPTED' | 'TENTATIVE' | 'DECLINED') {
+    setBusy(true)
+    try {
+      await api(`/meetings/${meetingId}/rsvp`, {
+        method: 'POST',
+        body: JSON.stringify({ response }),
+      })
+      setResponded(response)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (responded) {
+    const label = { ACCEPTED: 'Accepted', TENTATIVE: 'Marked as maybe', DECLINED: 'Declined' }[responded]
+    return <div className="muted small" style={{ marginTop: 6 }}>You responded: {label}</div>
+  }
+
+  return (
+    <div
+      style={{ display: 'flex', gap: 6, marginTop: 8 }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button className="btn tiny primary" disabled={busy} onClick={() => respond('ACCEPTED')}>
+        Accept
+      </button>
+      <button className="btn tiny" disabled={busy} onClick={() => respond('TENTATIVE')}>
+        Maybe
+      </button>
+      <button className="btn tiny" disabled={busy} onClick={() => respond('DECLINED')}>
+        Decline
+      </button>
     </div>
   )
 }
