@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Patch, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service.js';
 import { Public } from './public.decorator.js';
@@ -6,6 +6,7 @@ import { CurrentUser } from './current-user.decorator.js';
 import { AUTH_COOKIE } from './jwt.guard.js';
 import { LoginDto } from './dto/login.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
+import { UpdateNotificationSettingsDto } from './dto/notification-settings.dto.js';
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -42,6 +43,14 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser('id') userId: string) {
     return this.auth.me(userId);
+  }
+
+  @Patch('me/notification-settings')
+  updateNotificationSettings(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateNotificationSettingsDto,
+  ) {
+    return this.auth.updateNotificationSettings(userId, dto);
   }
 
   @Post('password/change')

@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EntityType, NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { WhatsAppService } from './whatsapp.service.js';
 
 export interface NotifyInput {
   recipientId: string;
@@ -11,10 +12,26 @@ export interface NotifyInput {
   entityId?: string;
 }
 
-/** In-app notifications only in Phase 1 (brief §15). */
+/**
+ * Record types eligible for a WhatsApp echo, on top of the in-app
+ * notification: tickets, procurement, and any @mention. Extend this list
+ * as more trigger events are approved (see BUILD_TASKS.md).
+ */
+function isWhatsAppEligible(type: NotificationType, entityType?: EntityType) {
+  if (type === NotificationType.MENTION) return true;
+  if (entityType === EntityType.TICKET) return true;
+  if (entityType === EntityType.PROCUREMENT_REQUEST) return true;
+  return false;
+}
+
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(NotificationsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly whatsapp: WhatsAppService,
+  ) {}
 
   /**
    * A recipient only ever has one notification per record. If this
@@ -36,7 +53,7 @@ export class NotificationsService {
         orderBy: { createdAt: 'desc' },
       });
       if (existing) {
-        return this.prisma.notification.update({
+        const updated = await this.prisma.notification.update({
           where: { id: existing.id },
           data: {
             type: input.type,
@@ -46,9 +63,11 @@ export class NotificationsService {
             readAt: null,
           },
         });
+        void this.relayToWhatsApp(input);
+        return updated;
       }
     }
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: {
         recipientId: input.recipientId,
         type: input.type,
@@ -58,6 +77,27 @@ export class NotificationsService {
         entityId: input.entityId,
       },
     });
+    void this.relayToWhatsApp(input);
+    return created;
+  }
+
+  /**
+   * Best-effort WhatsApp echo of an in-app notification — never throws,
+   * never blocks/delays notify() itself.
+   */
+  private async relayToWhatsApp(input: NotifyInput) {
+    if (!isWhatsAppEligible(input.type, input.entityType)) return;
+    try {
+      const recipient = await this.prisma.user.findUnique({
+        where: { id: input.recipientId },
+        select: { phoneNumber: true, whatsappOptIn: true },
+      });
+      if (!recipient?.whatsappOptIn || !recipient.phoneNumber) return;
+      const message = input.body ? `${input.title}\n${input.body}` : input.title;
+      await this.whatsapp.sendText(recipient.phoneNumber, message);
+    } catch (err) {
+      this.logger.error(`WhatsApp relay failed: ${(err as Error).message}`);
+    }
   }
 
   async notifyMany(

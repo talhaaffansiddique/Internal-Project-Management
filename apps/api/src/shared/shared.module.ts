@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { StorageService } from '../storage/storage.service.js';
 import { AuditService } from './audit.service.js';
 import { NotificationsService } from './notifications.service.js';
+import { WhatsAppService } from './whatsapp.service.js';
 import { FollowersService } from './followers.service.js';
 import { AttachmentsService } from './attachments.service.js';
 import { CommentsService } from './comments.service.js';
@@ -32,6 +33,7 @@ import {
     StorageService,
     AuditService,
     NotificationsService,
+    WhatsAppService,
     FollowersService,
     AttachmentsService,
     CommentsService,
@@ -41,6 +43,7 @@ import {
   exports: [
     AuditService,
     NotificationsService,
+    WhatsAppService,
     FollowersService,
     AttachmentsService,
     CommentsService,

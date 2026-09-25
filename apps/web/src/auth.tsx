@@ -18,6 +18,8 @@ export interface CurrentUser {
   designation: { id: string; name: string } | null
   teams: { id: string; name: string }[]
   lastLoginAt: string | null
+  phoneNumber: string | null
+  whatsappOptIn: boolean
 }
 
 interface AuthContextValue {
@@ -25,6 +27,7 @@ interface AuthContextValue {
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  setUser: (user: CurrentUser) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -60,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   )

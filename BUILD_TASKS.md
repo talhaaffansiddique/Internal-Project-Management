@@ -629,4 +629,41 @@ Each step restates scope + success criteria before code is written.
   back to unread on the second change, instead of a second row appearing.
   Verified in-browser as the affected user: Notifications page shows
   exactly one entry per record.
+- [x] **CR-16 — WhatsApp notifications (first pass, Meta Cloud API)**
+  Starts the v2.0 "Integrations" item — WhatsApp as a second delivery
+  channel alongside in-app notifications, opt-in per user.
+  - `User.phoneNumber` (E.164) and `User.whatsappOptIn` added to the
+    schema. Self-service via `PATCH /auth/me/notification-settings`
+    (validates E.164 format); surfaced as a "WhatsApp alerts" card at the
+    top of the Notifications page — phone number + opt-in checkbox, no
+    admin involvement needed.
+  - `WhatsAppService` (`apps/api/src/shared/whatsapp.service.ts`) wraps
+    the Meta WhatsApp Cloud API `POST /{phone_number_id}/messages`
+    endpoint. Reads `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` /
+    `WHATSAPP_API_VERSION` from env; **with no credentials set it logs
+    `[WhatsApp mock] would send to ... : ...` and no-ops** — safe by
+    default in every environment, including this one (no credentials
+    supplied yet).
+  - `NotificationsService.notify()` now also relays eligible events to
+    WhatsApp — fire-and-forget, never blocks or fails the in-app
+    notification. Eligible for this first pass: any `MENTION`, and
+    anything on a `TICKET` or `PROCUREMENT_REQUEST` (covers assignments,
+    status changes, and procurement approval requests). Only sent when
+    the recipient has both a phone number and `whatsappOptIn = true`.
+  - **Not yet wired, candidates for the next pass** (ask before adding —
+    each is a one-line addition to `isWhatsAppEligible` in
+    `notifications.service.ts`): `MEETING_INVITATION` / `MEETING_REMINDER`
+    (meetings), `TRAINING_ACK` (training acknowledgements),
+    `ACTIVITY_DUE` (My Work due-date reminders), `PROJECT`/`TASK` entity
+    events (currently in-app only). Also outstanding: a real Meta
+    Business + WhatsApp Business phone number and permanent access token
+    (currently unset, mock mode only); and outbound messages beyond a
+    recipient's 24h "customer service window" need a pre-approved
+    message **template**, not the free-form text this first pass sends —
+    matters once this goes live with real credentials, not before.
+  *Done:* `npm run build` clean for both apps. Verified end-to-end: set
+  phone number + opted in as Lena Marom via the new UI, confirmed
+  `GET /auth/me` round-tripped the saved values; changed a ticket she's
+  the requester on and confirmed the API log shows
+  `[WhatsApp mock] would send to +923001234567: TKT-0269 is now "in_progress"`.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

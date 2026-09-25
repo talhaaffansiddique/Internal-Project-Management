@@ -109,6 +109,8 @@ model User {
   primaryDepartmentId String?
   supervisorId        String?
   lastLoginAt         DateTime?
+  phoneNumber         String?    // E.164, e.g. +923001234567 — WhatsApp notifications
+  whatsappOptIn       Boolean    @default(false)
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
 

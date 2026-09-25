@@ -59,6 +59,20 @@ export class AuthService {
     };
   }
 
+  async updateNotificationSettings(
+    userId: string,
+    dto: { phoneNumber?: string | null; whatsappOptIn?: boolean },
+  ) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.phoneNumber !== undefined ? { phoneNumber: dto.phoneNumber } : {}),
+        ...(dto.whatsappOptIn !== undefined ? { whatsappOptIn: dto.whatsappOptIn } : {}),
+      },
+    });
+    return this.me(userId);
+  }
+
   async changePassword(
     userId: string,
     currentPassword: string,

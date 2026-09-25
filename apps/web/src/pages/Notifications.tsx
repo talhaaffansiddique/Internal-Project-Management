@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
+import { useAuth, type CurrentUser } from '../auth'
 
 interface Notification {
   id: string
@@ -69,6 +70,8 @@ export default function Notifications({
         )}
       </div>
 
+      <WhatsAppSettings />
+
       {loading ? (
         <p className="muted">Loading…</p>
       ) : rows.length === 0 ? (
@@ -98,6 +101,71 @@ export default function Notifications({
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function WhatsAppSettings() {
+  const { user, setUser } = useAuth()
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber ?? '')
+  const [optIn, setOptIn] = useState(user?.whatsappOptIn ?? false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  async function save() {
+    setSaving(true)
+    setError(null)
+    setSaved(false)
+    try {
+      const updated = await api<CurrentUser>('/auth/me/notification-settings', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          phoneNumber: phoneNumber.trim() || null,
+          whatsappOptIn: optIn,
+        }),
+      })
+      setUser(updated)
+      setSaved(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="panel" style={{ marginBottom: 18 }}>
+      <h3>WhatsApp alerts</h3>
+      <div className="panel-body" style={{ padding: '14px 16px' }}>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Get a WhatsApp message for ticket updates, procurement approvals, and @mentions,
+          on top of your in-app notifications.
+        </p>
+        <div className="field">
+          <label className="field-label">Phone number (international format)</label>
+          <input
+            type="tel"
+            placeholder="+923001234567"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            style={{ maxWidth: 260 }}
+          />
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <input
+            type="checkbox"
+            checked={optIn}
+            onChange={(e) => setOptIn(e.target.checked)}
+          />
+          <span className="small">Send me WhatsApp alerts</span>
+        </label>
+        <button className="btn primary" onClick={save} disabled={saving}>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        {saved && <span className="muted small" style={{ marginLeft: 10 }}>Saved.</span>}
+        {error && <span className="bad small" style={{ marginLeft: 10 }}>{error}</span>}
+      </div>
     </div>
   )
 }
