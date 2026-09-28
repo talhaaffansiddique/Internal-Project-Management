@@ -777,4 +777,21 @@ Each step restates scope + success criteria before code is written.
   notification body and landed on the correct meeting detail page
   showing "Your response: Accepted" — confirming the RSVP from the
   notification actually persisted.
+- [x] **CR-21 (v1.05) — Meeting participants editable by organizer, calendar day view, all-upcoming list**
+  - Version scheme reset: `apps/web/src/version.ts` now shows `v1.05` and
+    is bumped on every change — 1.05 … 1.20, then 2.0, 2.01 …
+  - Meeting detail: the organizer (or admin) gets a **Remove** button per
+    participant and an **Add participant** picker. Uses the existing
+    `PATCH /meetings/:id { participantIds }` (newly added people get the
+    invitation notification, with the Accept/Maybe/Decline buttons).
+  - Calendar: **double-click a day** (or tap the day number, for touch)
+    to open it. One meeting → opens straight away; several → a day
+    modal lists them to pick from; none → offers "+ New meeting on this
+    day" with the date prefilled. Cells no longer select text on
+    double-click.
+  - "Upcoming meetings" below the calendar is now every future meeting
+    (next 12 months), not just the month on screen.
+  *Done:* `npm run build` clean. Verified in browser: 2-meeting day shows
+  the picker, remove + add participant persisted (checked via API),
+  upcoming list included a meeting in the following month.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

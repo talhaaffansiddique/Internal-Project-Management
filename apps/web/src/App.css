@@ -694,6 +694,7 @@ table.grid tbody tr:hover { background: var(--surface-2); }
   padding: 5px; font-size: 12px;
 }
 .cal-cell:nth-child(7n) { border-right: none; }
+.cal-cell { user-select: none; }
 .cal-dow {
   min-height: 0; background: var(--surface-2); text-align: center; font-weight: 600;
   color: var(--text-muted); text-transform: uppercase; font-size: 10.5px; padding: 7px 0;

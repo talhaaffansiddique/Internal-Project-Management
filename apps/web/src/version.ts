@@ -1,3 +1,3 @@
-// Bump this each phase so the running build is visible in the sidebar footer.
-export const APP_VERSION = 'v1.4 · build 1.4.0'
-export const APP_PHASE = 'v1.4 — Procurement'
+// Bump on every change: 1.05, 1.06 ... 1.20, then 2.0, 2.01 ...
+export const APP_VERSION = 'v1.05'
+export const APP_PHASE = 'v1.05'

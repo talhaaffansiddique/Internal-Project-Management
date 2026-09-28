@@ -76,6 +76,17 @@ export default function MeetingDetail({
     })
     void load()
   }
+  async function setParticipants(participantIds: string[]) {
+    try {
+      await api(`/meetings/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ participantIds }),
+      })
+      void load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update participants')
+    }
+  }
   async function cancelMeeting() {
     if (!confirm('Cancel this meeting? Participants will be notified.')) return
     await api(`/meetings/${id}`, { method: 'DELETE' })
@@ -193,10 +204,38 @@ export default function MeetingDetail({
                       </label>
                     </td>
                   )}
+                  {isOrganizer && (
+                    <td style={{ width: 80 }}>
+                      <button
+                        className="btn tiny danger"
+                        onClick={() =>
+                          setParticipants(
+                            m.participants
+                              .filter((x) => x.user.id !== p.user.id)
+                              .map((x) => x.user.id),
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
+          {isOrganizer && (
+            <AddParticipant
+              candidates={people.filter(
+                (p) =>
+                  p.id !== m.organizer.id &&
+                  !m.participants.some((x) => x.user.id === p.id),
+              )}
+              onAdd={(uid) =>
+                setParticipants([...m.participants.map((x) => x.user.id), uid])
+              }
+            />
+          )}
         </div>
 
         <div className="card">
@@ -253,6 +292,37 @@ export default function MeetingDetail({
           <EntityAttachments entityType="meetings" entityId={id} />
         </div>
       </div>
+    </div>
+  )
+}
+
+function AddParticipant({
+  candidates,
+  onAdd,
+}: {
+  candidates: UserLookup[]
+  onAdd: (userId: string) => void
+}) {
+  const [sel, setSel] = useState('')
+  if (candidates.length === 0) return null
+  return (
+    <div className="add-row" style={{ marginTop: 10 }}>
+      <select value={sel} onChange={(e) => setSel(e.target.value)}>
+        <option value="">Add participant…</option>
+        {candidates.map((p) => (
+          <option key={p.id} value={p.id}>{p.fullName}</option>
+        ))}
+      </select>
+      <button
+        className="btn primary"
+        disabled={!sel}
+        onClick={() => {
+          onAdd(sel)
+          setSel('')
+        }}
+      >
+        Add
+      </button>
     </div>
   )
 }

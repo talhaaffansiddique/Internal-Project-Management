@@ -32,6 +32,9 @@ export default function Meetings({
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [newDate, setNewDate] = useState('')
+  const [dayView, setDayView] = useState<Date | null>(null)
+  const [allUpcoming, setAllUpcoming] = useState<Meeting[]>([])
 
   useEffect(() => {
     if (!initialMeetingId) return
@@ -58,6 +61,15 @@ export default function Meetings({
       setLoading(false)
     }
   }
+  useEffect(() => {
+    if (openId) return
+    const now = new Date()
+    const to = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
+    const params = new URLSearchParams({ from: now.toISOString(), to: to.toISOString() })
+    void api<Meeting[]>(`/meetings?${params.toString()}`).then((r) =>
+      setAllUpcoming(r.filter((m) => new Date(m.endsAt) >= now)),
+    )
+  }, [openId, creating])
   useEffect(() => {
     if (openId) return
     void load()
@@ -91,9 +103,13 @@ export default function Meetings({
   while (cells.length % 7 !== 0) cells.push(null)
 
   const todayKey = ymd(new Date())
-  const upcoming = [...meetings]
-    .filter((m) => new Date(m.endsAt) >= new Date())
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+  const upcoming = [...allUpcoming].sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+
+  function openDay(date: Date) {
+    const list = byDay[ymd(date)] ?? []
+    if (list.length === 1) setOpenId(list[0].id)
+    else setDayView(date)
+  }
 
   return (
     <div>
@@ -147,8 +163,16 @@ export default function Meetings({
             <div
               key={i}
               className={`cal-cell ${key === todayKey ? 'cal-today' : ''}`}
+              onDoubleClick={() => openDay(date)}
+              title="Double-click to open this day"
             >
-              <div className="cal-daynum">{date.getDate()}</div>
+              <button
+                className="cal-daynum linklike"
+                style={{ textDecoration: 'none', color: 'inherit', font: 'inherit', display: 'block' }}
+                onClick={() => openDay(date)}
+              >
+                {date.getDate()}
+              </button>
               {(byDay[key] ?? []).map((m) => (
                 <button
                   key={m.id}
@@ -169,7 +193,7 @@ export default function Meetings({
       </div>
 
       <div className="panel" style={{ marginTop: 18 }}>
-        <h3>Upcoming this month</h3>
+        <h3>Upcoming meetings</h3>
         <div className="panel-body">
           {upcoming.length === 0 ? (
             <p className="muted small" style={{ padding: '10px 16px' }}>
@@ -193,9 +217,61 @@ export default function Meetings({
         </div>
       </div>
 
+      {dayView && (
+        <Modal
+          title={dayView.toLocaleDateString(undefined, {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+          })}
+          onClose={() => setDayView(null)}
+          footer={
+            <button
+              className="btn primary"
+              onClick={() => {
+                setNewDate(ymd(dayView))
+                setDayView(null)
+                setCreating(true)
+              }}
+            >
+              + New meeting on this day
+            </button>
+          }
+        >
+          {(byDay[ymd(dayView)] ?? []).length === 0 ? (
+            <p className="muted">No meetings on this day.</p>
+          ) : (
+            <ul className="mini-list">
+              {(byDay[ymd(dayView)] ?? []).map((m) => (
+                <li key={m.id}>
+                  <button
+                    className="linklike"
+                    style={{ textAlign: 'left', textDecoration: 'none' }}
+                    onClick={() => {
+                      setDayView(null)
+                      setOpenId(m.id)
+                    }}
+                  >
+                    <b>
+                      {new Date(m.startsAt).toLocaleTimeString([], {
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </b>{' '}
+                    {m.title}
+                    <span className="muted small"> · {m.organizer.fullName}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Modal>
+      )}
+
       {creating && (
         <NewMeetingModal
-          onClose={() => setCreating(false)}
+          initialDate={newDate}
+          onClose={() => {
+            setCreating(false)
+            setNewDate('')
+          }}
           onCreated={(id) => {
             setCreating(false)
             setOpenId(id)
@@ -207,16 +283,18 @@ export default function Meetings({
 }
 
 function NewMeetingModal({
+  initialDate,
   onClose,
   onCreated,
 }: {
+  initialDate?: string
   onClose: () => void
   onCreated: (id: string) => void
 }) {
   const { user } = useAuth()
   const [title, setTitle] = useState('')
   const [agenda, setAgenda] = useState('')
-  const [date, setDate] = useState('')
+  const [date, setDate] = useState(initialDate ?? '')
   const [startTime, setStartTime] = useState('10:00')
   const [endTime, setEndTime] = useState('10:30')
   const [location, setLocation] = useState('')
