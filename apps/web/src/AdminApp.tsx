@@ -84,6 +84,10 @@ export default function AdminApp() {
     }
   }
 
+  function onLogoClick() {
+    if (!window.matchMedia('(max-width: 880px)').matches) toggleCollapsed(!collapsed)
+  }
+
   const refreshUnread = useCallback(() => {
     api<{ count: number }>('/notifications/unread-count')
       .then((r) => setUnread(r.count))
@@ -146,10 +150,20 @@ export default function AdminApp() {
           {ChevronIcon}
         </button>
         <div className="side-brand">
-          <div className="brand-chip brand-full">
+          <div
+            className="brand-chip brand-full brand-click"
+            onClick={onLogoClick}
+            title={collapsed ? 'Expand menu' : 'Collapse menu'}
+          >
             <img src="/captain-mark.png" alt="Captain & Company" className="brand-mark" />
           </div>
-          <img src="/favicon.svg" alt="CPM" className="brand-mini" />
+          <img
+            src="/favicon.svg"
+            alt="CPM"
+            className="brand-mini brand-click"
+            onClick={onLogoClick}
+            title="Expand menu"
+          />
           <span className="brand-tag">Project Management</span>
           <button
             className="sidebar-close"

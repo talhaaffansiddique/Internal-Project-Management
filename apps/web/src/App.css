@@ -871,6 +871,7 @@ table.grid tbody tr:hover { background: var(--surface-2); }
 .sidebar-collapse:hover { color: var(--primary); border-color: var(--primary); }
 .sidebar-collapse svg { transition: transform .2s ease; }
 .side-brand { position: relative; }
+.brand-click { cursor: pointer; }
 .brand-mini { display: none; width: 36px; height: 36px; border-radius: 9px; }
 .side-icon { display: inline-grid; place-items: center; flex: 0 0 20px; }
 .side-item { display: flex; align-items: center; gap: 12px; position: relative; }

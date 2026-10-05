@@ -810,4 +810,8 @@ Each step restates scope + success criteria before code is written.
   notification count as a small badge on its icon, tooltips on hover);
   expanded shows icon + label. Desktop only — the phone/tablet drawer
   always shows full labels. Choice persists in localStorage.
+- [x] **CR-25 (v1.09) — Click the logo to expand/collapse the menu**
+  On desktop, clicking the full logo (expanded) or the CPM tile
+  (collapsed) toggles the sidebar, same as the edge chevron. Ignored on
+  phone/tablet widths (<880px), where the logo stays a plain image.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)
