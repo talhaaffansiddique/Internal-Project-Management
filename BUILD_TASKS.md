@@ -794,4 +794,13 @@ Each step restates scope + success criteria before code is written.
   *Done:* `npm run build` clean. Verified in browser: 2-meeting day shows
   the picker, remove + add participant persisted (checked via API),
   upcoming list included a meeting in the following month.
+- [x] **CR-22 (v1.06) — CPM browser tab icon**
+  Replaced the default Vite favicon with a CPM monogram tile (dark tile,
+  white text, red underline), `apps/web/public/favicon.svg`.
+- [x] **CR-23 (v1.07) — Collapsible desktop sidebar; testing branch dropped**
+  A « button in the sidebar header hides the menu on desktop; a ☰ button
+  in the topbar brings it back. State persists in `localStorage`
+  (`sidebarCollapsed`). Mobile/tablet drawer behaviour (<880px) is
+  unchanged. The short-lived `testing` git branch was merged into `main`
+  and deleted (work stays on localhost for now, single `main` branch).
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

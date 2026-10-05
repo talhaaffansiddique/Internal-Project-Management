@@ -67,6 +67,25 @@ export default function AdminApp() {
   const [projectToOpen, setProjectToOpen] = useState<string | null>(null)
   const [meetingToOpen, setMeetingToOpen] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('sidebarCollapsed') === '1'
+    } catch {
+      return false
+    }
+  })
+  function toggleCollapsed(next: boolean) {
+    setCollapsed(next)
+    try {
+      localStorage.setItem('sidebarCollapsed', next ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }
+  function openMenu() {
+    if (window.matchMedia('(max-width: 880px)').matches) setSidebarOpen(true)
+    else toggleCollapsed(false)
+  }
 
   const refreshUnread = useCallback(() => {
     api<{ count: number }>('/notifications/unread-count')
@@ -115,7 +134,7 @@ export default function AdminApp() {
   const groups = [...new Set(NAV.map((n) => n.group))]
 
   return (
-    <div className="layout">
+    <div className={`layout ${collapsed ? 'collapsed' : ''}`}>
       <div
         className={`sidebar-scrim ${sidebarOpen ? 'open' : ''}`}
         onClick={() => setSidebarOpen(false)}
@@ -126,6 +145,14 @@ export default function AdminApp() {
             <img src="/captain-mark.png" alt="Captain & Company" className="brand-mark" />
           </div>
           <span className="brand-tag">Project Management</span>
+          <button
+            className="sidebar-collapse"
+            onClick={() => toggleCollapsed(true)}
+            aria-label="Collapse menu"
+            title="Collapse menu"
+          >
+            «
+          </button>
           <button
             className="sidebar-close"
             onClick={() => setSidebarOpen(false)}
@@ -166,7 +193,7 @@ export default function AdminApp() {
         <header className="topbar">
           <button
             className="menu-btn"
-            onClick={() => setSidebarOpen(true)}
+            onClick={openMenu}
             aria-label="Open menu"
           >
             ☰
