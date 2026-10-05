@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './auth'
 import { api } from './api'
 import { subscribeNotificationsChanged } from './notificationsStream'
-import { NAV_ICONS, ChevronIcon } from './navIcons'
+import { NAV_ICONS } from './navIcons'
 import { NotificationBell } from './components/NotificationBell'
 import { ThemeSwitch } from './theme'
 import { APP_VERSION, APP_PHASE } from './version'
@@ -141,14 +141,6 @@ export default function AdminApp() {
         onClick={() => setSidebarOpen(false)}
       />
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <button
-          className="sidebar-collapse"
-          onClick={() => toggleCollapsed(!collapsed)}
-          aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
-          title={collapsed ? 'Expand menu' : 'Collapse menu'}
-        >
-          {ChevronIcon}
-        </button>
         <div className="side-brand">
           <div
             className="brand-chip brand-full brand-click"

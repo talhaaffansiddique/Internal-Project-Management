@@ -861,15 +861,6 @@ table.grid tbody tr:hover { background: var(--surface-2); }
 }
 .sidebar-close { display: none; }
 .sidebar { position: relative; }
-.sidebar-collapse {
-  position: absolute; top: 28px; right: -12px; z-index: 40;
-  width: 24px; height: 24px; border-radius: 50%; padding: 0;
-  display: grid; place-items: center; cursor: pointer;
-  background: var(--surface); color: var(--text-muted);
-  border: 1px solid var(--border-strong); box-shadow: var(--shadow-sm);
-}
-.sidebar-collapse:hover { color: var(--primary); border-color: var(--primary); }
-.sidebar-collapse svg { transition: transform .2s ease; }
 .side-brand { position: relative; }
 .brand-click { cursor: pointer; }
 .brand-mini { display: none; width: 36px; height: 36px; border-radius: 9px; }
@@ -879,7 +870,6 @@ table.grid tbody tr:hover { background: var(--surface-2); }
 @media (min-width: 881px) {
   .layout.collapsed { grid-template-columns: 68px 1fr; }
   .layout.collapsed .sidebar { padding: 16px 8px; }
-  .layout.collapsed .sidebar-collapse svg { transform: rotate(180deg); }
   .layout.collapsed .brand-full,
   .layout.collapsed .brand-tag,
   .layout.collapsed .side-group,
@@ -912,7 +902,6 @@ table.grid tbody tr:hover { background: var(--surface-2); }
   }
   .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-xl); }
   .side-brand { position: relative; }
-  .sidebar-collapse { display: none; }
   .brand-mini { display: none !important; }
   .sidebar-close {
     display: block; position: absolute; top: 4px; right: 4px; background: none; border: none;

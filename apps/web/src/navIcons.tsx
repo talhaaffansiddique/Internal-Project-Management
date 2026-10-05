@@ -100,19 +100,3 @@ export const NAV_ICONS: Record<string, ReactNode> = {
   ),
   reports: wrap(<path d="M5 20V11M12 20V4M19 20v-6" />),
 }
-
-export const ChevronIcon = (
-  <svg
-    viewBox="0 0 24 24"
-    width="14"
-    height="14"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.4"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M15 6l-6 6 6 6" />
-  </svg>
-)

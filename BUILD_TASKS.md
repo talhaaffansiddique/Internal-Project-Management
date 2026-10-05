@@ -814,4 +814,8 @@ Each step restates scope + success criteria before code is written.
   On desktop, clicking the full logo (expanded) or the CPM tile
   (collapsed) toggles the sidebar, same as the edge chevron. Ignored on
   phone/tablet widths (<880px), where the logo stays a plain image.
+- [x] **CR-26 (v1.10) — Removed the edge chevron toggle**
+  The round chevron button on the sidebar edge (`.sidebar-collapse`) is
+  gone, along with its CSS and the unused icon. The logo (CR-25) is now
+  the only desktop expand/collapse control.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)
