@@ -803,4 +803,11 @@ Each step restates scope + success criteria before code is written.
   (`sidebarCollapsed`). Mobile/tablet drawer behaviour (<880px) is
   unchanged. The short-lived `testing` git branch was merged into `main`
   and deleted (work stays on localhost for now, single `main` branch).
+- [x] **CR-24 (v1.08) — Icon rail for the collapsed sidebar**
+  Every menu item now has a line icon (`navIcons.tsx`). The old « text
+  button is replaced by a round chevron toggle on the sidebar edge.
+  Collapsed = a 68px icon-only rail (CPM tile on top, section dividers,
+  notification count as a small badge on its icon, tooltips on hover);
+  expanded shows icon + label. Desktop only — the phone/tablet drawer
+  always shows full labels. Choice persists in localStorage.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

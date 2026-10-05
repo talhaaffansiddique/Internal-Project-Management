@@ -1,3 +1,3 @@
 // Bump on every change: 1.05, 1.06 ... 1.20, then 2.0, 2.01 ...
-export const APP_VERSION = 'v1.07'
-export const APP_PHASE = 'v1.07'
+export const APP_VERSION = 'v1.08'
+export const APP_PHASE = 'v1.08'

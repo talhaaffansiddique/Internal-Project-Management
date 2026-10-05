@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './auth'
 import { api } from './api'
 import { subscribeNotificationsChanged } from './notificationsStream'
+import { NAV_ICONS, ChevronIcon } from './navIcons'
 import { NotificationBell } from './components/NotificationBell'
 import { ThemeSwitch } from './theme'
 import { APP_VERSION, APP_PHASE } from './version'
@@ -82,10 +83,6 @@ export default function AdminApp() {
       /* ignore */
     }
   }
-  function openMenu() {
-    if (window.matchMedia('(max-width: 880px)').matches) setSidebarOpen(true)
-    else toggleCollapsed(false)
-  }
 
   const refreshUnread = useCallback(() => {
     api<{ count: number }>('/notifications/unread-count')
@@ -140,19 +137,20 @@ export default function AdminApp() {
         onClick={() => setSidebarOpen(false)}
       />
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <button
+          className="sidebar-collapse"
+          onClick={() => toggleCollapsed(!collapsed)}
+          aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
+          title={collapsed ? 'Expand menu' : 'Collapse menu'}
+        >
+          {ChevronIcon}
+        </button>
         <div className="side-brand">
-          <div className="brand-chip">
+          <div className="brand-chip brand-full">
             <img src="/captain-mark.png" alt="Captain & Company" className="brand-mark" />
           </div>
+          <img src="/favicon.svg" alt="CPM" className="brand-mini" />
           <span className="brand-tag">Project Management</span>
-          <button
-            className="sidebar-collapse"
-            onClick={() => toggleCollapsed(true)}
-            aria-label="Collapse menu"
-            title="Collapse menu"
-          >
-            «
-          </button>
           <button
             className="sidebar-close"
             onClick={() => setSidebarOpen(false)}
@@ -162,7 +160,7 @@ export default function AdminApp() {
           </button>
         </div>
         {groups.map((g) => (
-          <div key={g}>
+          <div key={g} className="side-section">
             <div className="side-group">{g}</div>
             {NAV.filter((n) => n.group === g).map((n) => {
               const locked = n.superAdmin ? !isSuperAdmin : n.admin && !canAdmin
@@ -175,9 +173,10 @@ export default function AdminApp() {
                     setView(n.key)
                     setSidebarOpen(false)
                   }}
-                  title={locked ? (n.superAdmin ? 'Requires Super Admin role' : 'Requires Admin role') : undefined}
+                  title={locked ? (n.superAdmin ? 'Requires Super Admin role' : 'Requires Admin role') : n.label}
                 >
-                  {n.label}
+                  <span className="side-icon">{NAV_ICONS[n.key]}</span>
+                  <span className="side-label">{n.label}</span>
                   {n.key === 'notifications' && unread > 0 && (
                     <span className="count">{unread}</span>
                   )}
@@ -193,7 +192,7 @@ export default function AdminApp() {
         <header className="topbar">
           <button
             className="menu-btn"
-            onClick={openMenu}
+            onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
           >
             ☰
