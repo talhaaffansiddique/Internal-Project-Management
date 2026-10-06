@@ -34,6 +34,7 @@ export class CreateUserDto {
   @IsOptional() @IsUUID() supervisorId?: string;
 
   @IsOptional() @IsArray() @IsString({ each: true }) roleKeys?: string[];
+  @IsOptional() @IsBoolean() isErpUser?: boolean;
 }
 
 export class UpdateUserDto {
@@ -49,6 +50,7 @@ export class UpdateUserDto {
   phoneNumber?: string | null;
 
   @IsOptional() @IsBoolean() whatsappOptIn?: boolean;
+  @IsOptional() @IsBoolean() isErpUser?: boolean;
 }
 
 export class UpdateUserStatusDto {

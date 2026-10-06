@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../api'
-import type { Team, Ticket, TicketForm } from '../../types'
+import { useAuth } from '../../auth'
+import type { Ticket, TicketForm } from '../../types'
 import { Modal, Field, ErrorText } from '../../ui'
 import TicketDetail from './TicketDetail'
 
@@ -30,6 +31,8 @@ export default function Tickets({
   initialTicketId?: string | null
   onConsumed?: () => void
 } = {}) {
+  const { user } = useAuth()
+  const isErpUser = !!user?.isErpUser
   const [openId, setOpenId] = useState<string | null>(initialTicketId ?? null)
 
   useEffect(() => {
@@ -125,8 +128,13 @@ export default function Tickets({
             with your team.
           </p>
         </div>
-        <button className="btn primary" onClick={() => setCreating(true)}>
-          + New request
+        <button
+          className="btn primary"
+          onClick={() => setCreating(true)}
+          disabled={!isErpUser}
+          title={isErpUser ? undefined : 'Only ERP users can raise an ERP complaint — ask an admin to mark you as an ERP user.'}
+        >
+          + ERP complaint form
         </button>
       </div>
 
@@ -185,6 +193,11 @@ export default function Tickets({
                 <td><b className="mono">{ticketNo(t.number)}</b></td>
                 <td>
                   {t.subject}
+                  {t.erpTicketNumber && (
+                    <span className="badge ok" style={{ marginLeft: 6 }}>
+                      ERP #{t.erpTicketNumber}
+                    </span>
+                  )}
                   {t.visibility === 'TEAM' && (
                     <span className="badge muted" style={{ marginLeft: 6 }}>
                       {t.team?.name}
@@ -222,6 +235,24 @@ export default function Tickets({
   )
 }
 
+const MAX_FILE_BYTES = 50 * 1024 * 1024
+
+async function uploadToTicket(ticketId: string, file: File) {
+  const fd = new FormData()
+  fd.append('file', file)
+  const res = await fetch('/api/v1/attachments', {
+    method: 'POST',
+    body: fd,
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error(`Could not upload "${file.name}"`)
+  const created = (await res.json()) as { id: string }
+  await api(`/tickets/${ticketId}/attachments`, {
+    method: 'POST',
+    body: JSON.stringify({ attachmentId: created.id }),
+  })
+}
+
 function NewTicketModal({
   forms,
   onClose,
@@ -231,29 +262,32 @@ function NewTicketModal({
   onClose: () => void
   onCreated: (id: string) => void
 }) {
-  const [type, setType] = useState('')
+  const form = forms.find((f) => f.type === 'erp_issue')
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
   const [fields, setFields] = useState<Record<string, string>>({})
-  const [visibility, setVisibility] = useState<'PRIVATE' | 'TEAM'>('PRIVATE')
-  const [teamId, setTeamId] = useState('')
-  const [teams, setTeams] = useState<Team[]>([])
+  const [files, setFiles] = useState<File[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-
-  useEffect(() => {
-    void api<Team[]>('/teams').then(setTeams)
-  }, [])
-
-  const form = forms.find((f) => f.type === type)
 
   function setField(name: string, value: string) {
     setFields((cur) => ({ ...cur, [name]: value }))
   }
 
+  function addFiles(list: FileList | null) {
+    if (!list) return
+    const picked = Array.from(list)
+    const tooBig = picked.find((f) => f.size > MAX_FILE_BYTES)
+    if (tooBig) {
+      setError(`"${tooBig.name}" is larger than 50 MB.`)
+      return
+    }
+    setError(null)
+    setFiles((cur) => [...cur, ...picked])
+  }
+
   const missingRequired =
-    !!form &&
-    form.fields.some((f) => f.required && !fields[f.name]?.trim())
+    !form || form.fields.some((f) => f.required && !fields[f.name]?.trim())
 
   async function save() {
     setBusy(true)
@@ -263,24 +297,32 @@ function NewTicketModal({
         method: 'POST',
         body: JSON.stringify({
           subject,
-          type,
+          type: 'erp_issue',
           description: description || undefined,
           fields,
-          visibility,
-          teamId: visibility === 'TEAM' ? teamId : undefined,
         }),
       })
+      let failed: string | null = null
+      for (const file of files) {
+        try {
+          await uploadToTicket(created.id, file)
+        } catch (e) {
+          failed = e instanceof Error ? e.message : 'Upload failed'
+        }
+      }
+      if (failed) {
+        alert(`Your complaint was created, but a file did not upload (${failed}). You can add it from the Files tab.`)
+      }
       onCreated(created.id)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not create ticket')
-    } finally {
+      setError(e instanceof Error ? e.message : 'Could not submit the complaint')
       setBusy(false)
     }
   }
 
   return (
     <Modal
-      title="New request"
+      title="ERP complaint form"
       onClose={onClose}
       footer={
         <>
@@ -288,86 +330,77 @@ function NewTicketModal({
           <button
             className="btn primary"
             onClick={save}
-            disabled={
-              busy ||
-              !type ||
-              subject.trim().length < 3 ||
-              missingRequired ||
-              (visibility === 'TEAM' && !teamId)
-            }
+            disabled={busy || subject.trim().length < 3 || missingRequired}
           >
-            {busy ? 'Creating…' : 'Create ticket'}
+            {busy ? 'Submitting…' : 'Submit complaint'}
           </button>
         </>
       }
     >
-      <Field label="Request type">
-        <select value={type} onChange={(e) => { setType(e.target.value); setFields({}) }}>
-          <option value="">— choose —</option>
-          {forms.map((f) => (
-            <option key={f.type} value={f.type}>{f.label}</option>
-          ))}
-        </select>
+      <Field label="Subject *">
+        <input value={subject} onChange={(e) => setSubject(e.target.value)} />
       </Field>
 
-      {type && (
-        <>
-          <Field label="Subject">
-            <input value={subject} onChange={(e) => setSubject(e.target.value)} />
-          </Field>
-
-          {form?.fields.map((f) => (
-            <Field key={f.name} label={f.label + (f.required ? ' *' : '')} hint={f.help}>
-              {f.type === 'textarea' ? (
-                <textarea
-                  rows={2}
-                  value={fields[f.name] ?? ''}
-                  onChange={(e) => setField(f.name, e.target.value)}
-                />
-              ) : f.type === 'select' ? (
-                <select
-                  value={fields[f.name] ?? ''}
-                  onChange={(e) => setField(f.name, e.target.value)}
-                >
-                  <option value="">— choose —</option>
-                  {f.options?.map((o) => (
-                    <option key={o} value={o}>{o}</option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  value={fields[f.name] ?? ''}
-                  onChange={(e) => setField(f.name, e.target.value)}
-                />
-              )}
-            </Field>
-          ))}
-
-          <Field label="More detail (optional)">
-            <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
-          </Field>
-
-          <Field label="Who can see this?">
+      {form?.fields.map((f) => (
+        <Field key={f.name} label={f.label + (f.required ? ' *' : '')} hint={f.help}>
+          {f.type === 'textarea' ? (
+            <textarea
+              rows={2}
+              value={fields[f.name] ?? ''}
+              onChange={(e) => setField(f.name, e.target.value)}
+            />
+          ) : f.type === 'select' ? (
             <select
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value as 'PRIVATE' | 'TEAM')}
+              value={fields[f.name] ?? ''}
+              onChange={(e) => setField(f.name, e.target.value)}
             >
-              <option value="PRIVATE">Private — me, assignee, admins, followers</option>
-              <option value="TEAM">Team — also everyone in a chosen team</option>
+              <option value="">— choose —</option>
+              {f.options?.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
             </select>
-          </Field>
-          {visibility === 'TEAM' && (
-            <Field label="Team">
-              <select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-                <option value="">— choose team —</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-            </Field>
+          ) : (
+            <input
+              value={fields[f.name] ?? ''}
+              onChange={(e) => setField(f.name, e.target.value)}
+            />
           )}
-        </>
-      )}
+        </Field>
+      ))}
+
+      <Field label="More detail (optional)">
+        <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+      </Field>
+
+      <div className="field">
+        <span className="field-label">Screenshot or short video (optional)</span>
+        <input
+          type="file"
+          multiple
+          accept="image/*,video/*"
+          onChange={(e) => {
+            addFiles(e.target.files)
+            e.target.value = ''
+          }}
+        />
+        <span className="field-hint">An image or a short clip showing the issue. Up to 50 MB each.</span>
+        {files.length > 0 && (
+          <ul className="mini-list" style={{ marginTop: 8 }}>
+            {files.map((f, i) => (
+              <li key={i}>
+                <span>{f.name} <span className="muted small">· {(f.size / 1024 / 1024).toFixed(1)} MB</span></span>
+                <button
+                  className="btn tiny"
+                  type="button"
+                  onClick={() => setFiles((cur) => cur.filter((_, j) => j !== i))}
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <ErrorText>{error}</ErrorText>
     </Modal>

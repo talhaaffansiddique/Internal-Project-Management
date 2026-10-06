@@ -85,6 +85,7 @@ export interface AdminUser {
   lastLoginAt: string | null
   phoneNumber: string | null
   whatsappOptIn: boolean
+  isErpUser: boolean
 }
 
 export interface UserLookup {
@@ -279,6 +280,8 @@ export interface Ticket {
   closedBy?: { id: string; fullName: string } | null
   closedAt?: string | null
   reopenReason?: string | null
+  erpTicketNumber?: string | null
+  erpRegisteredAt?: string | null
   form?: TicketForm | null
   allowedTransitions?: string[]
   permissions?: { mayAct: boolean; isAdmin: boolean }

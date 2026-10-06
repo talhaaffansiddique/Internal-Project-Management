@@ -109,6 +109,7 @@ export default function Users() {
               <th>Email</th>
               <th>Department</th>
               <th>Roles</th>
+              <th>ERP</th>
               <th>WhatsApp</th>
               <th>Status</th>
             </tr>
@@ -120,6 +121,7 @@ export default function Users() {
                 <td>{u.email}</td>
                 <td>{u.primaryDepartment?.name ?? '—'}</td>
                 <td>{u.roles.map((r) => r.name).join(', ') || '—'}</td>
+                <td>{u.isErpUser ? <span className="badge ok">ERP user</span> : <span className="muted small">—</span>}</td>
                 <td>
                   {u.phoneNumber ? (
                     <span className={`muted small ${u.whatsappOptIn ? '' : 'bad'}`}>
@@ -167,6 +169,7 @@ function UserModal({
   const [designationId, setDesignationId] = useState(value?.designation?.id ?? '')
   const [supervisorId, setSupervisorId] = useState(value?.supervisor?.id ?? '')
   const [status, setStatus] = useState<UserStatus>(value?.status ?? 'INVITED')
+  const [isErpUser, setIsErpUser] = useState(value?.isErpUser ?? false)
   const [phoneNumber, setPhoneNumber] = useState(value?.phoneNumber ?? '')
   const [whatsappOptIn, setWhatsappOptIn] = useState(value?.whatsappOptIn ?? false)
   const [roleKeys, setRoleKeys] = useState<string[]>(
@@ -200,6 +203,7 @@ function UserModal({
             primaryDepartmentId: departmentId || undefined,
             designationId: designationId || undefined,
             supervisorId: supervisorId || undefined,
+            isErpUser,
             roleKeys,
           }),
         })
@@ -213,6 +217,7 @@ function UserModal({
             supervisorId: supervisorId || undefined,
             phoneNumber: phoneNumber.trim() || null,
             whatsappOptIn,
+            isErpUser,
           }),
         })
         if (status !== value.status) {
@@ -333,6 +338,13 @@ function UserModal({
           </label>
         </Field>
       )}
+
+      <div className="field">
+        <label className="checkbox">
+          <input type="checkbox" checked={isErpUser} onChange={(e) => setIsErpUser(e.target.checked)} />
+          ERP user — can raise ERP complaints
+        </label>
+      </div>
 
       <div className="field">
         <span className="field-label">Roles</span>

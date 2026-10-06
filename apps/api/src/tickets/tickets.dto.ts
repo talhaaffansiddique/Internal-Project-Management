@@ -38,6 +38,10 @@ export class UpdateTicketDto {
   @IsOptional() @IsUUID() categoryId?: string;
 }
 
+export class SetErpNumberDto {
+  @IsString() @MinLength(1) erpTicketNumber!: string;
+}
+
 export class AssignTicketDto {
   @IsOptional() @IsUUID() assigneeId?: string | null;
 }

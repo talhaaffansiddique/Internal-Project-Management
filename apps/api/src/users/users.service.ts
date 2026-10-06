@@ -150,6 +150,7 @@ export class UsersService {
         primaryDepartmentId: dto.primaryDepartmentId ?? null,
         designationId: dto.designationId ?? null,
         supervisorId: dto.supervisorId ?? null,
+        isErpUser: dto.isErpUser ?? false,
         roles: { create: roles.map((r) => ({ roleId: r.id })) },
       },
       include: USER_INCLUDE,
@@ -168,6 +169,7 @@ export class UsersService {
         supervisorId: dto.supervisorId,
         phoneNumber: dto.phoneNumber,
         whatsappOptIn: dto.whatsappOptIn,
+        isErpUser: dto.isErpUser,
       },
       include: USER_INCLUDE,
     });

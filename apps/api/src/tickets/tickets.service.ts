@@ -236,10 +236,25 @@ export class TicketsService {
     if (!getForm(dto.type)) {
       await this.validateMasterKey('ticket_types', dto.type, 'ticket type');
     }
-    const visibility = dto.visibility ?? TicketVisibility.PRIVATE;
-    if (visibility === TicketVisibility.TEAM && !dto.teamId) {
-      throw new BadRequestException('A team ticket needs a team');
+    if (dto.type === 'erp_issue') {
+      const me = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { isErpUser: true },
+      });
+      if (!me?.isErpUser) {
+        throw new ForbiddenException(
+          'Only ERP users can raise an ERP complaint. Ask an admin to mark you as an ERP user.',
+        );
+      }
+      const erpForm = getForm('erp_issue');
+      const modules = erpForm?.fields.find((f) => f.name === 'erpModule')?.options ?? [];
+      if (!modules.includes(String(dto.fields?.erpModule ?? ''))) {
+        throw new BadRequestException('Choose a valid ERP module');
+      }
     }
+    // Who can see the ticket is set later by IT (after review) — new
+    // complaints always start private.
+    const visibility = TicketVisibility.PRIVATE;
 
     const ticket = await this.prisma.ticket.create({
       data: {
@@ -248,7 +263,7 @@ export class TicketsService {
         description: dto.description?.trim() || null,
         fields: (dto.fields ?? undefined) as Prisma.InputJsonValue | undefined,
         visibility,
-        teamId: visibility === TicketVisibility.TEAM ? dto.teamId : null,
+        teamId: null,
         categoryId: dto.categoryId ?? null,
         requesterId: userId,
         statusKey: 'new',
@@ -283,6 +298,13 @@ export class TicketsService {
       throw new ForbiddenException('You cannot edit this ticket');
     }
 
+    if (
+      (dto.visibility !== undefined || dto.teamId !== undefined) &&
+      !this.isPrivileged(roles) &&
+      existing.assigneeId !== userId
+    ) {
+      throw new ForbiddenException('Only IT can change who can see this ticket');
+    }
     const nextVisibility = dto.visibility ?? existing.visibility;
     const nextTeamId =
       dto.teamId !== undefined ? dto.teamId : existing.teamId;
@@ -310,6 +332,49 @@ export class TicketsService {
       summary: 'edited ticket details',
       actorId: userId,
     });
+    return this.decorate(ticket, userId, roles);
+  }
+
+  async setErpNumber(
+    id: string,
+    userId: string,
+    roles: string[],
+    erpTicketNumber: string,
+  ) {
+    const existing = await this.prisma.ticket.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Ticket not found');
+    if (existing.type !== 'erp_issue') {
+      throw new BadRequestException('Only ERP complaints have an ERP ticket number');
+    }
+    if (!this.isPrivileged(roles) && existing.assigneeId !== userId) {
+      throw new ForbiddenException('Only IT can register the ERP ticket number');
+    }
+    const value = erpTicketNumber.trim();
+    if (!value) throw new BadRequestException('Enter the ERP ticket number');
+
+    const ticket = await this.prisma.ticket.update({
+      where: { id },
+      data: {
+        erpTicketNumber: value,
+        erpRegisteredAt: new Date(),
+        erpRegisteredById: userId,
+      },
+      include: DETAIL_INCLUDE,
+    });
+    await this.audit.record({
+      entityType: EntityType.TICKET,
+      entityId: id,
+      action: 'ERP_REGISTERED',
+      summary: `registered the issue with the ERP vendor — ERP ticket ${value}`,
+      actorId: userId,
+      oldValue: existing.erpTicketNumber,
+      newValue: value,
+    });
+    await this.notifyWatchers(
+      ticket,
+      userId,
+      `TKT-${String(ticket.number).padStart(4, '0')} is registered with the ERP vendor (ERP ticket ${value})`,
+    );
     return this.decorate(ticket, userId, roles);
   }
 

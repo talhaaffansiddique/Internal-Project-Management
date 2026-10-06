@@ -111,6 +111,7 @@ model User {
   lastLoginAt         DateTime?
   phoneNumber         String?    // E.164, e.g. +923001234567 — WhatsApp notifications
   whatsappOptIn       Boolean    @default(false)
+  isErpUser           Boolean    @default(false) // may raise ERP complaints
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
 
@@ -445,6 +446,9 @@ model Ticket {
   closedById   String?
   closedAt     DateTime?
   reopenReason String?
+  erpTicketNumber String? // ticket number at the ERP vendor, entered by IT once registered
+  erpRegisteredAt DateTime?
+  erpRegisteredById String?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 

@@ -827,4 +827,29 @@ Each step restates scope + success criteria before code is written.
   always sink to the bottom when sorting by Assignee. Sorting is
   client-side over the loaded list; shared `.sortable` header styling
   in App.css so other lists can reuse it.
+- [x] **CR-28 (v1.12) — ERP complaint form, ERP-user flag, IT registration step**
+  Tickets are now raised through an ERP-only form and confirmed by IT.
+  - **ERP user flag:** `User.isErpUser` (migration
+    `erp_user_and_erp_ticket_number`). Checkbox in Users → edit/invite,
+    plus an ERP column in the list. Only ERP users may create an ERP
+    complaint — enforced in the API (403) and shown in the UI as a
+    disabled button with an explanation. Demo: Lena, Sara, Omar, Nadia,
+    Priya are ERP users; Hassan is not (seed-demo updated).
+  - **Form:** "+ New request" → "+ ERP complaint form", ERP-only (no type
+    picker). ERP module is a dropdown (Sales, Purchase, Inventory,
+    Manufacturing, Accounts / Finance, HCM, CRM — validated server-side),
+    new required Voucher name field, an image / short-video attachment
+    field below the details (up to 50 MB each, uploaded to the ticket's
+    Files after it is created), and "Who can see this?" removed. New
+    complaints always start Private. Submitting creates the ticket.
+  - **IT step:** on an ERP ticket, an admin or the assignee gets an "ERP
+    registration" card: enter the ERP vendor's ticket number (stores
+    `erpTicketNumber` + date, audited as ERP_REGISTERED, notifies the
+    requester/followers) and then set "Who can see this?" — Private or
+    Team, plus individual people (added as ticket followers). Changing
+    visibility is now restricted to admin/assignee in the API. The ERP
+    number also shows as a badge in the ticket list.
+  - **Consequence to be aware of:** other request types (IT issue,
+    training, access, procurement, general) can no longer be raised from
+    the UI — the API and existing tickets still support them.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

@@ -21,6 +21,7 @@ import {
   CreateTicketDto,
   ListTicketsQuery,
   ReopenTicketDto,
+  SetErpNumberDto,
   UpdateTicketDto,
 } from './tickets.dto.js';
 
@@ -105,6 +106,17 @@ export class TicketsController {
     @Body() dto: UpdateTicketDto,
   ) {
     return this.tickets.update(id, userId, roles, dto);
+  }
+
+  @Patch('tickets/:id/erp-number')
+  @Roles()
+  setErpNumber(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoles() roles: string[],
+    @Body() dto: SetErpNumberDto,
+  ) {
+    return this.tickets.setErpNumber(id, userId, roles, dto.erpTicketNumber);
   }
 
   @Patch('tickets/:id/assignee')

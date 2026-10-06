@@ -23,7 +23,14 @@ export const TICKET_FORMS: Record<string, TicketForm> = {
     type: 'erp_issue',
     label: 'ERP Issue',
     fields: [
-      { name: 'erpModule', label: 'ERP module', type: 'text', required: true, help: 'e.g. General Ledger, Inventory' },
+      {
+        name: 'erpModule',
+        label: 'ERP module',
+        type: 'select',
+        required: true,
+        options: ['Sales', 'Purchase', 'Inventory', 'Manufacturing', 'Accounts / Finance', 'HCM', 'CRM'],
+      },
+      { name: 'voucherName', label: 'Voucher name', type: 'text', required: true, help: 'The specific voucher the issue happens on, e.g. Sales Invoice' },
       { name: 'whatTrying', label: 'What were you trying to do?', type: 'textarea', required: true },
       { name: 'whatWentWrong', label: 'What went wrong?', type: 'textarea', required: true },
       { name: 'errorMessage', label: 'Error message (exact text)', type: 'textarea' },

@@ -20,6 +20,7 @@ export interface CurrentUser {
   lastLoginAt: string | null
   phoneNumber: string | null
   whatsappOptIn: boolean
+  isErpUser: boolean
 }
 
 interface AuthContextValue {

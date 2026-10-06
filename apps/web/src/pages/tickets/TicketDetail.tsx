@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api'
 import { useAuth } from '../../auth'
-import type { Ticket, UserLookup } from '../../types'
+import type { Team, Ticket, UserLookup } from '../../types'
 import { Modal, Field, ErrorText } from '../../ui'
 import {
   Chatter,
@@ -216,6 +216,17 @@ export default function TicketDetail({
             </div>
           </div>
 
+          {ticket.type === 'erp_issue' && (
+            <ErpPanel
+              ticket={ticket}
+              canManage={
+                ticket.statusKey !== 'closed' &&
+                (isAdmin || ticket.assignee?.id === user?.id)
+              }
+              onChanged={() => void load()}
+            />
+          )}
+
           {ticket.description && (
             <div className="card">
               <h3>Description</h3>
@@ -285,6 +296,212 @@ export default function TicketDetail({
           }}
         />
       )}
+    </div>
+  )
+}
+
+interface FollowerRow {
+  id: string
+  user: { id: string; fullName: string }
+}
+
+function ErpPanel({
+  ticket,
+  canManage,
+  onChanged,
+}: {
+  ticket: Ticket
+  canManage: boolean
+  onChanged: () => void
+}) {
+  const [erpNo, setErpNo] = useState(ticket.erpTicketNumber ?? '')
+  const [people, setPeople] = useState<UserLookup[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+  const [followers, setFollowers] = useState<FollowerRow[]>([])
+  const [visibility, setVisibility] = useState<'PRIVATE' | 'TEAM'>(ticket.visibility)
+  const [teamId, setTeamId] = useState(ticket.team?.id ?? '')
+  const [addId, setAddId] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
+
+  async function loadFollowers() {
+    setFollowers(await api<FollowerRow[]>(`/tickets/${ticket.id}/followers`))
+  }
+  useEffect(() => {
+    void loadFollowers()
+    if (!canManage) return
+    void api<UserLookup[]>('/users/lookup').then(setPeople)
+    void api<Team[]>('/teams').then(setTeams)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket.id, canManage])
+
+  async function run(fn: () => Promise<unknown>, done: string) {
+    setBusy(true)
+    setError(null)
+    setNote(null)
+    try {
+      await fn()
+      setNote(done)
+      onChanged()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const saveErpNo = () =>
+    run(
+      () =>
+        api(`/tickets/${ticket.id}/erp-number`, {
+          method: 'PATCH',
+          body: JSON.stringify({ erpTicketNumber: erpNo }),
+        }),
+      'ERP ticket number saved.',
+    )
+
+  const saveVisibility = () =>
+    run(
+      () =>
+        api(`/tickets/${ticket.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            visibility,
+            teamId: visibility === 'TEAM' ? teamId : undefined,
+          }),
+        }),
+      'Visibility updated.',
+    )
+
+  const addPerson = () =>
+    run(async () => {
+      await api(`/tickets/${ticket.id}/followers`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: addId }),
+      })
+      setAddId('')
+      await loadFollowers()
+    }, 'Person added.')
+
+  const removePerson = (userId: string) =>
+    run(async () => {
+      await api(`/tickets/${ticket.id}/followers/${userId}`, { method: 'DELETE' })
+      await loadFollowers()
+    }, 'Person removed.')
+
+  const registered = !!ticket.erpTicketNumber
+  const visUnchanged =
+    visibility === ticket.visibility &&
+    (visibility === 'PRIVATE' || teamId === (ticket.team?.id ?? ''))
+
+  return (
+    <div className="card">
+      <h3>ERP registration</h3>
+      <div className="kv">
+        <span>ERP ticket no.</span>
+        <b>
+          {registered ? (
+            <>
+              {ticket.erpTicketNumber}
+              {ticket.erpRegisteredAt && (
+                <span className="muted small">
+                  {' '}· registered {new Date(ticket.erpRegisteredAt).toLocaleDateString()}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="muted">Not registered with the ERP vendor yet</span>
+          )}
+        </b>
+      </div>
+
+      {canManage && (
+        <>
+          <div className="add-row" style={{ marginTop: 10 }}>
+            <input
+              placeholder="Enter the ERP ticket number"
+              value={erpNo}
+              onChange={(e) => setErpNo(e.target.value)}
+              style={{
+                flex: 1,
+                border: '1px solid var(--border-strong)',
+                borderRadius: 8,
+                padding: '8px 10px',
+                background: 'var(--surface)',
+                color: 'var(--text)',
+              }}
+            />
+            <button
+              className="btn primary"
+              disabled={busy || !erpNo.trim() || erpNo.trim() === (ticket.erpTicketNumber ?? '')}
+              onClick={saveErpNo}
+            >
+              {registered ? 'Update' : 'Confirm registered'}
+            </button>
+          </div>
+          <p className="muted small" style={{ margin: '6px 0 0' }}>
+            Enter this once you have reviewed the complaint and logged it with the ERP company.
+          </p>
+
+          <h3 style={{ marginTop: 18 }}>Who can see this?</h3>
+          <div className="add-row">
+            <select
+              value={visibility}
+              onChange={(e) => setVisibility(e.target.value as 'PRIVATE' | 'TEAM')}
+            >
+              <option value="PRIVATE">Private — requester, assignee, admins and the people below</option>
+              <option value="TEAM">Team — also everyone in a chosen team</option>
+            </select>
+            {visibility === 'TEAM' && (
+              <select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+                <option value="">— team —</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
+            <button
+              className="btn"
+              disabled={busy || (visibility === 'TEAM' && !teamId) || visUnchanged}
+              onClick={saveVisibility}
+            >
+              Save
+            </button>
+          </div>
+        </>
+      )}
+
+      <ul className="member-list" style={{ marginTop: 10 }}>
+        {followers.map((f) => (
+          <li key={f.id}>
+            <span>{f.user.fullName}</span>
+            {canManage && f.user.id !== ticket.requester.id && (
+              <button className="btn tiny" disabled={busy} onClick={() => removePerson(f.user.id)}>
+                Remove
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {canManage && (
+        <div className="add-row">
+          <select value={addId} onChange={(e) => setAddId(e.target.value)}>
+            <option value="">Add a person who can see this…</option>
+            {people
+              .filter((p) => !followers.some((f) => f.user.id === p.id))
+              .map((p) => (
+                <option key={p.id} value={p.id}>{p.fullName}</option>
+              ))}
+          </select>
+          <button className="btn primary" disabled={busy || !addId} onClick={addPerson}>
+            Add
+          </button>
+        </div>
+      )}
+      {note && <p className="muted small" style={{ margin: '8px 0 0' }}>{note}</p>}
+      <ErrorText>{error}</ErrorText>
     </div>
   )
 }

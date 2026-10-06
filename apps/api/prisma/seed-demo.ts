@@ -29,16 +29,17 @@ interface DemoUser {
   fullName: string;
   dept: string;
   roles: string[];
+  erp?: boolean;
 }
 
 const USERS: DemoUser[] = [
   { local: 'admin', fullName: 'Aisha Admin', dept: 'IT', roles: ['ADMIN'] },
-  { local: 'sara.k', fullName: 'Sara Khan', dept: 'Finance', roles: ['TEAM_MEMBER', 'EMPLOYEE'] },
-  { local: 'omar.d', fullName: 'Omar Dar', dept: 'Warehouse', roles: ['SUPERVISOR'] },
-  { local: 'nadia.f', fullName: 'Nadia Farooq', dept: 'HR', roles: ['SUPERVISOR'] },
-  { local: 'lena.m', fullName: 'Lena Marom', dept: 'Sales', roles: ['EMPLOYEE'] },
+  { local: 'sara.k', fullName: 'Sara Khan', dept: 'Finance', roles: ['TEAM_MEMBER', 'EMPLOYEE'], erp: true },
+  { local: 'omar.d', fullName: 'Omar Dar', dept: 'Warehouse', roles: ['SUPERVISOR'], erp: true },
+  { local: 'nadia.f', fullName: 'Nadia Farooq', dept: 'HR', roles: ['SUPERVISOR'], erp: true },
+  { local: 'lena.m', fullName: 'Lena Marom', dept: 'Sales', roles: ['EMPLOYEE'], erp: true },
   { local: 'yusuf.a', fullName: 'Yusuf Ali', dept: 'Management', roles: ['DIRECTOR'] },
-  { local: 'priya.n', fullName: 'Priya Nair', dept: 'Purchase', roles: ['PURCHASING_FINANCE'] },
+  { local: 'priya.n', fullName: 'Priya Nair', dept: 'Purchase', roles: ['PURCHASING_FINANCE'], erp: true },
   { local: 'hassan.r', fullName: 'Hassan Raza', dept: 'R&D', roles: ['EMPLOYEE'] },
 ];
 
@@ -227,6 +228,7 @@ async function main() {
         fullName: u.fullName,
         status: 'ACTIVE',
         primaryDepartmentId: deptId(u.dept),
+        isErpUser: !!u.erp,
         roles: { create: u.roles.map((k) => ({ roleId: roleId(k) })) },
       },
     });
