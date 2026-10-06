@@ -818,4 +818,13 @@ Each step restates scope + success criteria before code is written.
   The round chevron button on the sidebar edge (`.sidebar-collapse`) is
   gone, along with its CSS and the unused icon. The logo (CR-25) is now
   the only desktop expand/collapse control.
+- [x] **CR-27 (v1.11) — Sortable columns on the Tickets list**
+  ID, Type, Requester, Assignee, Created and Status headers are
+  clickable: first click ascending, second descending, third returns to
+  the default order. ▲/▼ marks the active column (↕ on the rest).
+  Status sorts in workflow order (New → Assigned → In Progress → Waiting
+  for User → Resolved → Closed), not alphabetically; unassigned tickets
+  always sink to the bottom when sorting by Assignee. Sorting is
+  client-side over the loaded list; shared `.sortable` header styling
+  in App.css so other lists can reuse it.
 - [ ] **v2.0 — Integrations & AI** (email/WhatsApp, workflow engine, AI, mobile)

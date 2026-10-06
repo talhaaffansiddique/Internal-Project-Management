@@ -467,6 +467,10 @@ table.grid th {
   color: var(--text-muted); padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface-2);
 }
 table.grid td { padding: 11px 14px; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+table.grid th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+table.grid th.sortable:hover { color: var(--text); }
+.sort-ind { margin-left: 5px; font-size: 9px; opacity: .45; }
+table.grid th[aria-sort='ascending'] .sort-ind, table.grid th[aria-sort='descending'] .sort-ind { opacity: 1; color: var(--primary); }
 table.grid tbody tr:last-child td { border-bottom: none; }
 table.grid tbody tr { cursor: pointer; }
 table.grid tbody tr:hover { background: var(--surface-2); }

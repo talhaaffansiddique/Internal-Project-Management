@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../api'
 import type { Team, Ticket, TicketForm } from '../../types'
 import { Modal, Field, ErrorText } from '../../ui'
@@ -12,6 +12,8 @@ const STATUS_LABEL: Record<string, string> = {
   resolved: 'Resolved',
   closed: 'Closed',
 }
+const STATUS_ORDER = Object.keys(STATUS_LABEL)
+type SortKey = 'id' | 'type' | 'requester' | 'assignee' | 'created' | 'status'
 const ticketNo = (n: number) => `TKT-${String(n).padStart(4, '0')}`
 
 const VIEWS = [
@@ -45,6 +47,45 @@ export default function Tickets({
   const [statusFilter, setStatusFilter] = useState('')
   const [q, setQ] = useState('')
   const [creating, setCreating] = useState(false)
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 } | null>(null)
+
+  function toggleSort(key: SortKey) {
+    setSort((cur) =>
+      cur?.key === key ? (cur.dir === 1 ? { key, dir: -1 } : null) : { key, dir: 1 },
+    )
+  }
+  const sortedRows = useMemo(() => {
+    if (!sort) return rows
+    const typeLabel = (t: Ticket) => forms.find((f) => f.type === t.type)?.label ?? t.type
+    const val = (t: Ticket): string | number => {
+      switch (sort.key) {
+        case 'id': return t.number
+        case 'type': return typeLabel(t).toLowerCase()
+        case 'requester': return t.requester.fullName.toLowerCase()
+        case 'assignee': return t.assignee?.fullName.toLowerCase() ?? ''
+        case 'created': return new Date(t.createdAt).getTime()
+        case 'status': return STATUS_ORDER.indexOf(t.statusKey)
+      }
+    }
+    return [...rows].sort((a, b) => {
+      const x = val(a), y = val(b)
+      // unassigned always sinks to the bottom regardless of direction
+      if (sort.key === 'assignee' && (x === '') !== (y === '')) return x === '' ? 1 : -1
+      return (x < y ? -1 : x > y ? 1 : 0) * sort.dir
+    })
+  }, [rows, sort, forms])
+  const th = (key: SortKey, label: string) => (
+    <th
+      className="sortable"
+      onClick={() => toggleSort(key)}
+      aria-sort={sort?.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}
+    >
+      {label}
+      <span className="sort-ind">
+        {sort?.key === key ? (sort.dir === 1 ? '▲' : '▼') : '↕'}
+      </span>
+    </th>
+  )
 
   async function load() {
     setLoading(true)
@@ -129,17 +170,17 @@ export default function Tickets({
         <table className="grid">
           <thead>
             <tr>
-              <th>ID</th>
+              {th('id', 'ID')}
               <th>Subject</th>
-              <th>Type</th>
-              <th>Requester</th>
-              <th>Assignee</th>
-              <th>Created</th>
-              <th>Status</th>
+              {th('type', 'Type')}
+              {th('requester', 'Requester')}
+              {th('assignee', 'Assignee')}
+              {th('created', 'Created')}
+              {th('status', 'Status')}
             </tr>
           </thead>
           <tbody>
-            {rows.map((t) => (
+            {sortedRows.map((t) => (
               <tr key={t.id} onClick={() => setOpenId(t.id)}>
                 <td><b className="mono">{ticketNo(t.number)}</b></td>
                 <td>
